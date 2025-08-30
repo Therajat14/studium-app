@@ -1,28 +1,21 @@
 import express from "express";
-import morgan from "morgan";
 import dotenv from "dotenv";
-import connectDB from "./src/config/db.js";
-import authRoutes from "./src/routes/auth.js";
 
-// Load environment variables
-dotenv.config();
-
-// Connect to the database
-connectDB();
+import morgan from "morgan";
+import { connectDB } from "./src/utils/db.js";
+import authRoutes from "./src/routes/authRoutes.js";
 
 const app = express();
+dotenv.config();
+connectDB();
 
-// Use Morgan for request logging
+// Middlewares
 app.use(morgan("dev"));
+app.use(express.json()); // <-- useful if you’re handling JSON requests
 
-// Middleware to parse JSON requests
-app.use(express.json());
+// Routes
 
-// API Routes
-app.use("/api/auth", authRoutes);
+app.use("/", authRoutes);
 
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// Server
+app.listen(3000, () => console.log("server running on port 3000"));
