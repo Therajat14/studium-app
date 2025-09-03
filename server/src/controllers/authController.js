@@ -1,5 +1,6 @@
 import User from "../models/User.js";
-import { hashPassword } from "../utils/bcrypt.js";
+import { hashPassword, comparePassword } from "../utils/bcrypt.js";
+import { signToken } from "../utils/jwt.js";
 
 export const registerUser = async (req, res) => {
   try {
@@ -51,4 +52,24 @@ export const registerUser = async (req, res) => {
       msg: "Internal server error",
     });
   }
+};
+
+export const loginUSer = async (req, res) => {
+  const {  password , ...payload} = req.body;
+  const user = await User.findOne({ payload.email }).select("+password");
+  if (!user)
+    return res.status(400).json({
+      success: false,
+      error: "User not found",
+    });
+
+  const isMatch = await comparePassword(password, user.password);
+
+  if (!isMatch)
+    return res.status(500).json({
+      success: false,
+      error: "Invalid Credentaials",
+    });
+  signToken({payload});
+  return;
 };

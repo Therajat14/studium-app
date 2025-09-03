@@ -1,9 +1,6 @@
 import bcrypt from "bcryptjs";
 
-console.log(process.env.BCRYPT_SALT_ROUNDS);
-
 const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS);
-console.log(saltRounds);
 if (!saltRounds || Number.isNaN(saltRounds)) {
   throw new Error("Invalid BCRYPT_SALT_ROUNDS value in environment");
 }
