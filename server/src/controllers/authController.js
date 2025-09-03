@@ -46,7 +46,7 @@ export const registerUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Register User Error:", error); // ✅ logs for debugging, but not exposed to client
+    console.error("Register User Error:", error); // logs for debugging, but not exposed to client
     res.status(500).json({
       success: false,
       msg: "Internal server error",
