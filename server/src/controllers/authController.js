@@ -54,22 +54,61 @@ export const registerUser = async (req, res) => {
   }
 };
 
-export const loginUSer = async (req, res) => {
-  const {  password , ...payload} = req.body;
-  const user = await User.findOne({ payload.email }).select("+password");
-  if (!user)
-    return res.status(400).json({
-      success: false,
-      error: "User not found",
+export const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // 1. Validate input
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        msg: "Email and password are required",
+      });
+    }
+
+    // 2. Find user
+    const user = await User.findOne({ email }).select("+password");
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        msg: "Invalid email or password", // generic for security
+      });
+    }
+
+    // 3. Check password
+    const isMatch = await comparePassword(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        msg: "Invalid email or password", // generic
+      });
+    }
+
+    // 4. Generate token
+    const token = signToken({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
     });
 
-  const isMatch = await comparePassword(password, user.password);
-
-  if (!isMatch)
-    return res.status(500).json({
-      success: false,
-      error: "Invalid Credentaials",
+    // 5. Respond with safe user data
+    res.status(200).json({
+      success: true,
+      msg: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     });
-  signToken({payload});
-  return;
+  } catch (error) {
+    console.error("Login User Error:", error);
+    res.status(500).json({
+      success: false,
+      msg: "Internal server error",
+    });
+  }
 };
