@@ -6,7 +6,7 @@ function App() {
           🚧 Project Under Development
         </h1>
         <p className="text-gray-600">
-          We’re working hard to bring this project to life. Stay tuned!
+          We’re working hard to bring this project to life. Stay tuned!!
         </p>
       </div>
     </div>
