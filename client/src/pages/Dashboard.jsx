@@ -1,4 +1,4 @@
-import LogoutButton from "../components/auth/LoginForm.jsx";
+import LogoutButton from "../components/auth/LogoutButton";
 import { useAuth } from "../hooks/useAuth";
 
 const Dashboard = () => {

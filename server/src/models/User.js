@@ -23,6 +23,9 @@ const userSchema = new mongoose.Schema(
       minlength: 6, // better security
       select: false, // don't return password by default in queries
     },
+    collage: {
+      type: String,
+    },
     role: {
       type: String,
       enum: ["user", "admin"],
