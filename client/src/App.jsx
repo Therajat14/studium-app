@@ -7,33 +7,36 @@ import Dashboard from "./pages/Dashboard";
 import PrivateRoute from "./routes/PrivateRoute";
 import { RestricedRoute } from "./routes/restricedRoute";
 import { Link } from "react-router";
+import { ThemeProvider } from "@/components/theme-provider";
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <RestricedRoute>
-                <Home />
-              </RestricedRoute>
-            }
-          />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route
-            path="/dashboard"
-            element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <RestricedRoute>
+                  <Home />
+                </RestricedRoute>
+              }
+            />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route
+              path="/dashboard"
+              element={
+                <PrivateRoute>
+                  <Dashboard />
+                </PrivateRoute>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
