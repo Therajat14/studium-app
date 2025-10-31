@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
-// Import all components from shadcn/ui
 import {
   Card,
   CardHeader,
@@ -13,37 +12,21 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import {
-  BookOpen,
-  Mail,
-  Lock,
-  User,
-  Hash,
-  School,
-  Calendar,
-  Github,
-  Linkedin,
-  Check,
-} from "lucide-react";
+import { BookOpen, Mail, Lock, User, Hash, Check } from "lucide-react";
 
-// --- AUTH FORM COMPONENT ---
+// ------------------- AUTH FORM -------------------
 
 const AuthForm = ({ onToggle }) => {
-  const [isSignUp, setIsSignUp] = useState(true); // Default to SignUp for image match
-  const [currentStep, setCurrentStep] = useState(1); // Mock step state
-  const { login, signup } = useAuth();
+  const [isSignUp, setIsSignUp] = useState(true);
+  const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const { login, signup } = useAuth();
 
   const [formData, setFormData] = useState({
-    name: "Alex Johnson",
-    email: "alex.johnson@college.edu",
-    password: "securepassword",
-    rollNumber: "2021CS001", // Added rollNumber to match the image/structure
-    college: "",
-    branch: "",
-    year: "",
-    github: "",
-    linkedin: "",
+    name: "",
+    email: "",
+    password: "",
+    rollNumber: "",
   });
 
   const handleInputChange = (e) =>
@@ -52,10 +35,13 @@ const AuthForm = ({ onToggle }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // Mimic the image's "Continue" button action for the first step
+
+    // Multi-step mock
     if (isSignUp && currentStep < 3) {
-      setCurrentStep(currentStep + 1);
-      setLoading(false);
+      setTimeout(() => {
+        setCurrentStep(currentStep + 1);
+        setLoading(false);
+      }, 400);
       return;
     }
 
@@ -63,51 +49,44 @@ const AuthForm = ({ onToggle }) => {
       if (isSignUp) await signup(formData);
       else await login(formData);
     } catch (error) {
-      console.error("Authentication error:", error);
+      console.error("Auth Error:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper component for styled input with icon
-  const InputWithIcon = ({ Icon, ...props }) => (
-    <div className="relative">
-      <Icon className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-      <Input className="pl-10" {...props} />
+  // 🔹 Input field with icon
+  const InputWithIcon = ({ Icon, label, ...props }) => (
+    <div className="space-y-2">
+      <Label htmlFor={props.id}>{label}</Label>
+      <div className="relative">
+        <Icon className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+        <Input className="pl-9" {...props} />
+      </div>
     </div>
   );
 
-  // Component to render the progress bar
+  // 🔹 Progress bar for sign up
   const ProgressBar = () => (
-    <div className="mb-6">
-      <h3 className="text-foreground text-sm font-semibold">
-        Step {currentStep} of 3: Basic Information
-      </h3>
-      <div className="mt-3 flex items-center justify-between">
+    <div className="mb-4">
+      <p className="text-muted-foreground mb-2 text-sm font-medium">
+        Step {currentStep} of 3
+      </p>
+      <div className="flex items-center justify-between">
         {[1, 2, 3].map((step) => (
           <React.Fragment key={step}>
-            {/* Step Circle */}
             <div
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+              className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-colors ${
                 step <= currentStep
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground"
               }`}
             >
-              {step <= currentStep ? (
-                step < currentStep ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  step
-                )
-              ) : (
-                step
-              )}
+              {step < currentStep ? <Check className="h-3.5 w-3.5" /> : step}
             </div>
-            {/* Connector Line */}
             {step < 3 && (
               <div
-                className={`h-1 flex-1 transition-colors duration-300 ${
+                className={`h-1 flex-1 transition-colors ${
                   step < currentStep ? "bg-primary" : "bg-muted"
                 }`}
               />
@@ -119,81 +98,79 @@ const AuthForm = ({ onToggle }) => {
   );
 
   return (
-    <Card className="w-full border-none shadow-none">
-      <CardHeader className="mb-6 p-0">
+    <Card className="border-border bg-card w-full border shadow-sm">
+      <CardHeader>
         <CardTitle className="text-2xl font-bold">
           {isSignUp ? "Join Your College Community" : "Welcome Back"}
         </CardTitle>
-        <CardDescription className="text-muted-foreground">
-          {isSignUp ? <ProgressBar /> : "Sign in to your account"}
+        <CardDescription>
+          {isSignUp ? (
+            <>
+              Complete your profile to get started.
+              <ProgressBar />
+            </>
+          ) : (
+            "Sign in to your account to continue."
+          )}
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="p-0">
+      <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Fields for Step 1 (Matching the image) */}
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name">Full Name</Label>
+          {isSignUp && (
+            <>
               <InputWithIcon
                 Icon={User}
+                label="Full Name"
                 id="name"
                 name="name"
                 placeholder="Enter your full name"
                 value={formData.name}
                 onChange={handleInputChange}
+                disabled={currentStep > 1}
                 required
-                disabled={!isSignUp || currentStep > 1}
               />
-            </div>
 
-            <div>
-              <Label htmlFor="email">College Email</Label>
-              <InputWithIcon
-                Icon={Mail}
-                id="email"
-                type="email"
-                name="email"
-                placeholder="your.name@college.edu"
-                value={formData.email}
-                onChange={handleInputChange}
-                required
-                disabled={currentStep > 1 && isSignUp}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="rollNumber">Roll Number / Student ID</Label>
               <InputWithIcon
                 Icon={Hash}
+                label="Roll Number / Student ID"
                 id="rollNumber"
                 name="rollNumber"
                 placeholder="2021CS001"
                 value={formData.rollNumber}
                 onChange={handleInputChange}
+                disabled={currentStep > 1}
                 required
-                disabled={!isSignUp || currentStep > 1}
               />
-            </div>
+            </>
+          )}
 
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <InputWithIcon
-                Icon={Lock}
-                id="password"
-                type="password"
-                name="password"
-                placeholder="Create a strong password"
-                value={formData.password}
-                onChange={handleInputChange}
-                required
-                disabled={currentStep > 1 && isSignUp}
-              />
-            </div>
-          </div>
-          {/* Note: In a real app, you would conditionally render the fields for step 2 & 3 here */}
+          <InputWithIcon
+            Icon={Mail}
+            label="College Email"
+            id="email"
+            name="email"
+            type="email"
+            placeholder="your.name@college.edu"
+            value={formData.email}
+            onChange={handleInputChange}
+            disabled={currentStep > 1 && isSignUp}
+            required
+          />
 
-          <Button type="submit" className="mt-6 w-full" disabled={loading}>
+          <InputWithIcon
+            Icon={Lock}
+            label="Password"
+            id="password"
+            name="password"
+            type="password"
+            placeholder="••••••••"
+            value={formData.password}
+            onChange={handleInputChange}
+            required
+          />
+
+          <Button type="submit" className="mt-4 w-full" disabled={loading}>
             {loading
               ? "Please wait..."
               : isSignUp && currentStep < 3
@@ -205,15 +182,17 @@ const AuthForm = ({ onToggle }) => {
         </form>
       </CardContent>
 
-      <CardFooter className="text-muted-foreground flex justify-center p-0 pt-6 text-sm">
+      <Separator className="my-4" />
+
+      <CardFooter className="text-muted-foreground flex justify-center text-sm">
         {isSignUp ? "Already have an account?" : "Don’t have an account?"}
         <Button
           variant="link"
-          className="text-primary hover:text-primary/80 ml-1 p-0"
+          className="text-primary ml-1 p-0"
           onClick={() => {
             setIsSignUp(!isSignUp);
-            setCurrentStep(1); // Reset step on switch
-            // You might want to call onToggle here if the component is lifted
+            setCurrentStep(1);
+            onToggle?.();
           }}
         >
           {isSignUp ? "Sign In" : "Sign Up"}
@@ -223,54 +202,45 @@ const AuthForm = ({ onToggle }) => {
   );
 };
 
-// --- WRAPPING CONTAINER COMPONENT ---
+// ------------------- PAGE LAYOUT -------------------
 
 const LoginLayout = () => {
   return (
-    // The main container. Min-h-screen for full height.
-    // bg-background for theme compatibility.
-    <div className="bg-background flex min-h-screen items-center justify-center p-4 lg:p-10">
-      {/* Outer wrapper to center content and apply grid */}
-      <div className="bg-card w-full max-w-6xl overflow-hidden rounded-xl shadow-2xl lg:grid lg:grid-cols-2 lg:shadow-none">
-        {/* LEFT COLUMN: Hero/Marketing Section */}
-        <div className="bg-primary text-primary-foreground hidden p-12 lg:flex lg:flex-col lg:items-start lg:justify-center">
-          {/* Logo/Title */}
-          <div className="mb-8 flex items-center">
-            <BookOpen className="mr-3 h-8 w-8" />
+    <div className="bg-background flex min-h-screen items-center justify-center px-4 lg:px-8">
+      <div className="border-border bg-card w-full max-w-5xl overflow-hidden rounded-xl border shadow-lg lg:grid lg:grid-cols-2">
+        {/* Left Section */}
+        <div className="bg-primary text-primary-foreground hidden flex-col justify-center space-y-6 p-10 lg:flex">
+          <div className="flex items-center space-x-3">
+            <BookOpen className="h-7 w-7" />
             <h1 className="text-3xl font-bold">Studium</h1>
           </div>
 
-          {/* Headline */}
-          <h2 className="mb-4 text-4xl leading-tight font-bold">
+          <h2 className="text-4xl leading-tight font-bold">
             Your College Community Platform
           </h2>
 
-          {/* Description */}
-          <p className="mb-10 text-lg opacity-90">
-            The perfect blend of Notion, Reddit, and LinkedIn designed
-            specifically for college students. Connect, learn, and grow
-            together.
+          <p className="text-base opacity-90">
+            A hybrid of Notion, Reddit, and LinkedIn — designed for college
+            students to connect, learn, and grow together.
           </p>
 
-          {/* Features */}
-          <div className="space-y-4">
-            <div className="flex items-center">
-              <BookOpen className="mr-3 h-5 w-5" />
-              <span>Collaborative knowledge sharing</span>
-            </div>
-            <div className="flex items-center">
-              <Mail className="mr-3 h-5 w-5" />
-              <span>Reddit-style community discussions</span>
-            </div>
-            <div className="flex items-center">
-              <User className="mr-3 h-5 w-5" />
-              <span>Professional networking & mentorship</span>
-            </div>
-          </div>
+          <Separator className="bg-primary-foreground/40 my-4" />
+
+          <ul className="space-y-3 text-sm">
+            <li className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" /> Collaborative learning spaces
+            </li>
+            <li className="flex items-center gap-2">
+              <Mail className="h-4 w-4" /> Smart community discussions
+            </li>
+            <li className="flex items-center gap-2">
+              <User className="h-4 w-4" /> Career networking & mentorship
+            </li>
+          </ul>
         </div>
 
-        {/* RIGHT COLUMN: Authentication Form */}
-        <div className="p-8 lg:p-16">
+        {/* Right Section */}
+        <div className="flex items-center justify-center p-8 lg:p-16">
           <AuthForm />
         </div>
       </div>

@@ -29,8 +29,8 @@ export const AuthProvider = ({ children }) => {
     setUser(data);
   };
 
-  const signup = async (email, password) => {
-    const { token } = await signupApi(email, password);
+  const signup = async (user) => {
+    const { token } = await signupApi(user);
     setToken(token);
     const data = await meApi();
     setUser(data);

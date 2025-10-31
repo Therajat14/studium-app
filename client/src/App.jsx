@@ -8,6 +8,7 @@ import PrivateRoute from "./routes/PrivateRoute";
 import { RestricedRoute } from "./routes/restricedRoute";
 import { Link } from "react-router";
 import { ThemeProvider } from "@/components/theme-provider";
+import UnderDevelopment from "./pages/underDevelopment";
 
 function App() {
   return (
@@ -15,6 +16,8 @@ function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
+            <Route path="*" element={<UnderDevelopment />} />
+
             <Route
               path="/"
               element={

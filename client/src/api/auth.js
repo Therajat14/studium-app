@@ -5,8 +5,8 @@ export const loginApi = async (user) => {
   return data; // expects { token }
 };
 
-export const signupApi = async (email, password) => {
-  const { data } = await axios.post("/auth/signup", { email, password });
+export const signupApi = async (user) => {
+  const { data } = await axios.post("/auth/signup", { user });
   return data;
 };
 
