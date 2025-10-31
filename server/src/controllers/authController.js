@@ -4,7 +4,8 @@ import { signToken } from "../utils/jwt.js";
 
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    console.log(req.body);
+    const { name, email, password } = req.body.user;
 
     // 1. Validate input
     if (!name || !email || !password) {
