@@ -1,7 +1,7 @@
 import axios from "../utils/axiosInstance";
 
 export const loginApi = async (user) => {
-  const { data } = await axios.post("/auth/login", user);
+  const { data } = await axios.post("/auth/login", { user });
   return data; // expects { token }
 };
 

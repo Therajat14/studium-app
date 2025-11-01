@@ -9,6 +9,8 @@ const router = express.Router();
 
 // Example controller usage
 router.post("/signup", registerUser);
-router.post("/login", validate(loginSchema), loginUser);
+// router.post("/login", validate(loginSchema), loginUser);
+router.post("/login", loginUser);
+router.get("/me", (req, res) => res.send("user"));
 
 export default router;

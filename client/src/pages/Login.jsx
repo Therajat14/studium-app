@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { BookOpen, Mail, Lock, User, Hash, Check } from "lucide-react";
+import { useNavigate } from "react-router";
 
 // ------------------- AUTH FORM -------------------
 
@@ -28,6 +29,8 @@ const AuthForm = ({ onToggle }) => {
     password: "",
     rollNumber: "",
   });
+
+  const navigate = useNavigate();
 
   const handleInputChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -48,6 +51,7 @@ const AuthForm = ({ onToggle }) => {
     try {
       if (isSignUp) await signup(formData);
       else await login(formData);
+      navigate("/feed");
     } catch (error) {
       console.error("Auth Error:", error);
     } finally {
