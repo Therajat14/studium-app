@@ -1,0 +1,19 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "sshOptions": {
+                "port": 22
+            },
+            "driver": "PostgreSQL",
+            "name": "PG Local",
+            "database": "studium",
+            "username": "postgres",
+            "password": "shreyarajat1511",
+            "connectionTimeout": 30
+        }
+    ]
+}
