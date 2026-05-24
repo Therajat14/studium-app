@@ -14,6 +14,7 @@ import KnowledgePage from '@/pages/KnowledgePage.js'
 import QnaPage from '@/pages/QnaPage.js'
 import OpportunitiesPage from '@/pages/OpportunitiesPage.js'
 import CampusPage from '@/pages/CampusPage.js'
+import LostFoundPage from '@/pages/LostFoundPage.js'
 import { PostDetail } from '@/features/posts/PostDetail.js'
 import { ChatPage } from '@/features/chat/ChatPage.js'
 import { queryClient } from '@/lib/queryClient.js'
@@ -46,6 +47,7 @@ function App() {
               <Route path="/qna"           element={<PrivatePage><QnaPage /></PrivatePage>} />
               <Route path="/opportunities" element={<PrivatePage><OpportunitiesPage /></PrivatePage>} />
               <Route path="/campus"        element={<PrivatePage><CampusPage /></PrivatePage>} />
+              <Route path="/lostfound"    element={<PrivatePage><LostFoundPage /></PrivatePage>} />
 
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>

@@ -12,6 +12,7 @@ import {
   Award,
   Users,
   X,
+  PackageSearch,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth.js'
 import { Avatar } from '@/components/ui/avatar.js'
@@ -24,6 +25,7 @@ const NAV = [
   { to: '/messages',     icon: MessageCircle,  label: 'Messages' },
   { to: '/opportunities',icon: Briefcase,      label: 'Opportunities' },
   { to: '/campus',       icon: MapPin,         label: 'Campus Life' },
+  { to: '/lostfound',   icon: PackageSearch,  label: 'Lost & Found' },
   { to: '/search',       icon: Search,         label: 'Discover' },
   { to: '/profile',      icon: User,           label: 'Profile' },
 ]

@@ -124,6 +124,8 @@ model User {
   opportunities            Opportunity[]
   campusReviews            CampusReview[]
   reviewVotes              ReviewVote[]
+  lostFoundItems           LostFoundItem[]
+  lostFoundClaims          LostFoundClaim[]
 
   @@index([email])
   @@index([role])
@@ -570,4 +572,63 @@ model ReviewVote {
 
   @@unique([reviewId, userId])
   @@index([reviewId])
+}
+
+// ─── Lost & Found ──────────────────────────────────────────────────────────
+
+enum LostFoundType {
+  LOST
+  FOUND
+}
+
+enum LostFoundCategory {
+  ELECTRONICS
+  DOCUMENTS
+  CLOTHING
+  ACCESSORIES
+  BOOKS
+  KEYS
+  BAGS
+  OTHER
+}
+
+enum LostFoundStatus {
+  OPEN
+  RESOLVED
+}
+
+model LostFoundItem {
+  id          String            @id @default(cuid())
+  type        LostFoundType
+  category    LostFoundCategory
+  title       String            @db.VarChar(200)
+  description String            @db.Text
+  location    String?           @db.VarChar(200)
+  imageUrl    String?
+  contactInfo String?           @db.VarChar(200)
+  status      LostFoundStatus   @default(OPEN)
+  authorId    String
+  author      User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  claims      LostFoundClaim[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([authorId])
+  @@index([type])
+  @@index([status])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model LostFoundClaim {
+  id        String        @id @default(cuid())
+  itemId    String
+  item      LostFoundItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String        @db.Text
+  createdAt DateTime      @default(now())
+
+  @@unique([itemId, userId])
+  @@index([itemId])
 }

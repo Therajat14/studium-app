@@ -24,6 +24,7 @@ import { knowledgeRoutes } from './modules/knowledge/knowledge.routes.js'
 import { qnaRoutes } from './modules/qna/qna.routes.js'
 import { opportunitiesRoutes } from './modules/opportunities/opportunities.routes.js'
 import { campusRoutes } from './modules/campus/campus.routes.js'
+import { lostFoundRoutes } from './modules/lostfound/lostfound.routes.js'
 
 export const createApp = async () => {
   const app = Fastify({ logger: loggerConfig })
@@ -87,6 +88,7 @@ export const createApp = async () => {
   await app.register(qnaRoutes,            { prefix: '/api/qna' })
   await app.register(opportunitiesRoutes,  { prefix: '/api/opportunities' })
   await app.register(campusRoutes,         { prefix: '/api/campus' })
+  await app.register(lostFoundRoutes,     { prefix: '/api/lostfound' })
 
   return app
 }

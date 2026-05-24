@@ -357,3 +357,47 @@ export interface CampusListResponse {
   total: number
   page: number
 }
+
+// ─── Lost & Found ──────────────────────────────────────────────────────────
+
+export type LostFoundType     = 'LOST' | 'FOUND'
+export type LostFoundCategory = 'ELECTRONICS' | 'DOCUMENTS' | 'CLOTHING' | 'ACCESSORIES' | 'BOOKS' | 'KEYS' | 'BAGS' | 'OTHER'
+export type LostFoundStatus   = 'OPEN' | 'RESOLVED'
+
+export interface LostFoundAuthor {
+  id: string
+  name: string
+  avatarUrl: string | null
+  branch: string | null
+  year: number | null
+}
+
+export interface LostFoundClaim {
+  id: string
+  message: string
+  user: LostFoundAuthor
+  createdAt: string
+}
+
+export interface LostFoundItem {
+  id: string
+  type: LostFoundType
+  category: LostFoundCategory
+  title: string
+  description: string
+  location: string | null
+  imageUrl: string | null
+  contactInfo: string | null
+  status: LostFoundStatus
+  author: LostFoundAuthor
+  claims?: LostFoundClaim[]
+  _count: { claims: number }
+  createdAt: string
+  updatedAt: string
+}
+
+export interface LostFoundListResponse {
+  items: LostFoundItem[]
+  total: number
+  page: number
+}
