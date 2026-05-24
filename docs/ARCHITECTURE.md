@@ -1,305 +1,350 @@
-# Architecture — Studium (Phase 3)
+# Architecture — Studium
 
-> Last updated: Phase 3 — Users module, follow system, RBAC middleware, Prisma 7, security hardening
+> Last updated: Phase 5 — Testing, CI/CD, college-scoped feed, full feature set complete
 
 ---
 
-## Overview
-
-Studium is a full-stack web application with a strict TypeScript codebase across both the React frontend and Fastify backend. The architecture is designed around a module-per-feature pattern on the server and a feature-sliced structure on the client, both of which scale gracefully as new capabilities are added.
+## System Overview
 
 ```
-Browser (React SPA)
+Browser (React 19 SPA)
        │
-       │  HTTPS / REST (JSON)
-       │  Cookie (httpOnly refresh token)
+       │  HTTPS / REST (Axios + httpOnly cookie)
+       │  WebSocket (Socket.IO)
        ▼
-Fastify API Server (Node.js)
-       │
-       │  Prisma Client
-       ▼
-PostgreSQL
+Fastify 5 API Server (Node.js 20)
+       │                    │
+       │  Prisma 7          │  ioredis
+       ▼                    ▼
+PostgreSQL 15          Redis 7
+                            │
+                       BullMQ Workers
+                       (notifications, email)
 ```
 
 ---
 
 ## Frontend Architecture
 
-### Tech choices
+### Tech stack
 
-| Tool | Reason |
-|------|--------|
-| React 19 + TypeScript | Strong ecosystem, concurrent features |
-| Vite 7 | Fast HMR, native ESM, excellent TypeScript support |
-| TailwindCSS v4 | Utility-first, collocated styles, zero dead CSS |
-| TanStack Query v5 | Declarative data fetching, caching, background sync |
-| React Hook Form + Zod | Performant forms, shared validation schemas |
-| shadcn/ui (Radix) | Accessible headless primitives + Tailwind integration |
-| Axios | Automatic token injection + transparent refresh interceptor |
+| Tool | Version | Purpose |
+|------|---------|---------|
+| React | 19 | UI framework with concurrent features |
+| TypeScript | 5 | Strict end-to-end type safety |
+| Vite | 7 | Build tool, dev server, HMR |
+| TailwindCSS | v4 | Utility-first styles, zero dead CSS |
+| TanStack Query | v5 | Server state, caching, infinite scroll, optimistic updates |
+| React Hook Form | 7 | Performant uncontrolled forms |
+| Zod | 3 | Form and API response validation |
+| shadcn/ui (Radix) | — | Accessible headless primitives |
+| Axios | 1 | HTTP client with request/response interceptors |
+| Socket.IO client | 4 | Real-time event subscription |
 
 ### Folder structure
 
 ```
 client/src/
-├── api/               # Per-feature typed API functions (no raw axios here)
+├── api/               # One file per feature — typed async functions (no raw axios calls)
+│   ├── auth.ts
+│   ├── feed.ts
+│   ├── posts.ts
+│   ├── users.ts
+│   ├── knowledge.ts
+│   ├── qna.ts
+│   ├── opportunities.ts
+│   ├── campus.ts
+│   ├── lostfound.ts
+│   └── ...
+│
 ├── components/
-│   ├── ui/            # shadcn/ui primitives — never modified after generation
-│   └── auth/          # App-specific shared components
-├── context/           # React Context providers (AuthContext)
-├── features/          # (Phase 4+) self-contained feature modules
-│   └── feed/          # e.g. components/, hooks/, api/ all co-located
+│   ├── ui/            # shadcn/ui primitives (Button, Dialog, Badge…) — never hand-edit
+│   └── shared/        # App-specific reusable components (Avatar, Navbar…)
+│
+├── context/
+│   └── AuthContext.tsx  # User + token state; exposes login/register/logout
+│
+├── features/          # Self-contained feature modules (components + hooks co-located)
+│   ├── feed/          # FeedPage, PostCard, FeedTabs (My Branch / My College / Everyone)
+│   ├── posts/         # PostDetailPage, CommentThread, CreatePostModal
+│   ├── chat/          # ChatPage, ConversationList, MessageBubble
+│   └── notifications/ # NotificationBell, NotificationList
+│
 ├── hooks/             # App-wide custom hooks
-├── lib/
-│   ├── queryClient.ts # TanStack Query client singleton
-│   ├── utils.ts       # cn() helper
-│   └── validators/    # Zod schemas (shared between forms and API layer)
-├── pages/             # Route-level components — thin, delegate to features
-├── routes/            # Route guards (PrivateRoute)
-├── types/             # Shared TypeScript interfaces
-└── utils/             # axiosInstance + token injection
+│   ├── useAuth.ts     # AuthContext consumer
+│   ├── useFeed.ts     # Infinite feed with college/branch/sort params
+│   ├── usePosts.ts    # Create, delete, bookmark
+│   ├── useReactions.ts
+│   ├── useSocket.ts   # Socket.IO connection lifecycle
+│   └── ...
+│
+├── pages/             # Route-level components — thin shells, delegate to features
+│   ├── Login.tsx      # Step-based register/login with Dehradun college dropdowns
+│   ├── ProfilePage.tsx
+│   ├── LostFoundPage.tsx
+│   ├── KnowledgePage.tsx
+│   ├── QnaPage.tsx
+│   ├── OpportunitiesPage.tsx
+│   ├── CampusPage.tsx
+│   └── SearchPage.tsx
+│
+├── routes/
+│   └── PrivateRoute.tsx  # Checks auth loading + user, redirects to /login
+│
+├── test/              # Test infrastructure
+│   ├── mocks/         # MSW handlers + setupServer
+│   ├── setup.ts       # @testing-library/jest-dom + MSW lifecycle
+│   └── utils.tsx      # renderWithProviders (QueryClient + MemoryRouter)
+│
+├── types/
+│   └── index.ts       # All shared TypeScript interfaces and enums
+│
+└── utils/
+    └── axiosInstance.ts  # Axios instance, token injection, 401 refresh interceptor
 ```
 
 ### Authentication flow (client)
 
 ```
 1. App mounts → AuthContext.useEffect fires
-2. POST /api/auth/refresh (httpOnly cookie sent automatically)
-   ├── Success → injectToken(accessToken), setUser(user), loading=false
-   └── Failure → injectToken(null), loading=false (unauthenticated)
+2. POST /api/auth/refresh  (httpOnly cookie sent automatically)
+   ├── 200 → injectToken(accessToken), setUser(user), loading = false
+   └── 4xx → injectToken(null), setUser(null), loading = false
 3. PrivateRoute checks loading + user
-   ├── loading=true → show spinner (prevents flash redirect)
-   ├── user exists → render protected page
-   └── user=null → <Navigate to="/login" />
-4. On login/register → accessToken stored in module-level variable (not localStorage)
+   ├── loading = true  → spinner (prevents flash redirect)
+   ├── user != null    → render protected page
+   └── user = null     → <Navigate to="/login" />
+4. On login/register → accessToken stored in JS module variable (never localStorage)
 5. All requests attach Bearer token via axios request interceptor
-6. On 401 → interceptor calls /api/auth/refresh, retries original request
-7. If refresh fails → clear token, redirect to /login
+6. On 401 response → interceptor queues requests, calls /api/auth/refresh, retries
+7. If refresh fails → clear token + user, redirect to /login
 ```
 
-### Token security design
+### Feed scoping (college-focused)
 
-Access tokens are stored **in memory only** (a module-level variable in `axiosInstance.ts`). They are never written to localStorage or sessionStorage. This eliminates the primary XSS token-theft vector.
+The feed has three tabs with automatic scoping:
 
-The long-lived refresh token is stored in an **httpOnly, SameSite=Lax cookie** scoped to `/api/auth`. JavaScript cannot read it; the browser attaches it automatically to refresh requests.
+| Tab | Scope | API params |
+|-----|-------|-----------|
+| My Branch | Same college + same branch | `?college=GEU&branch=CSE` |
+| My College | Same college, all branches | `?college=GEU` |
+| Everyone | All colleges | *(no college filter)* |
+
+Each tab also supports sort sub-tabs (Latest / Trending / Following) when in "Everyone" scope. The feed API endpoint is public — `userId` is extracted from JWT when present.
+
+### Token security
+
+Access tokens live **only in memory** (a module-level variable in `axiosInstance.ts`). They are never written to localStorage or sessionStorage, eliminating the primary XSS token-theft vector.
+
+The long-lived refresh token is stored in an **httpOnly, SameSite=Lax cookie** scoped to `/api/auth/refresh`. JavaScript cannot read it; the browser attaches it automatically only to refresh requests.
 
 ---
 
 ## Backend Architecture
 
-### Tech choices
+### Tech stack
 
-| Tool | Reason |
-|------|--------|
-| Fastify 4 + TypeScript | 2–3× faster than Express, built-in schema validation, typed plugins |
-| Prisma 5 | Type-safe ORM, auto-generated client, excellent migration tooling |
-| PostgreSQL 15 | Relational integrity (votes, follows), compound unique constraints, JSONB |
-| Zod | Consistent validation with the frontend, typed parse results |
-| @fastify/jwt | Signed JWT with typed payload, integrated verify hook |
-| @fastify/cookie | Secure httpOnly cookie management for refresh tokens |
-| @fastify/helmet | Security headers (HSTS, CSP, X-Frame, etc.) |
-| @fastify/rate-limit | Per-IP request throttling, configurable per route |
-| bcryptjs | Battle-tested password hashing (12 rounds) |
+| Tool | Version | Purpose |
+|------|---------|---------|
+| Fastify | 5 | HTTP framework (2–3× faster than Express, built-in schema) |
+| TypeScript | 5 | Strict typing across all modules |
+| Prisma | 7 | Type-safe ORM with `@prisma/adapter-pg` (native PG driver) |
+| PostgreSQL | 15+ | Primary relational database |
+| Redis | 7 | Presence, pub/sub for Socket.IO scaling, BullMQ backend |
+| Socket.IO | 4 | Real-time bidirectional events (notifications + chat) |
+| BullMQ | 5 | Distributed job queues (notification fan-out, email delivery) |
+| Zod | 3 | Request body + query validation (consistent with client) |
+| @fastify/jwt | — | Signed JWT with typed payload, `jwtVerify()` preHandler |
+| @fastify/cookie | — | Secure httpOnly cookie management for refresh tokens |
+| @fastify/helmet | — | 15+ security headers (HSTS, CSP, X-Frame…) |
+| @fastify/rate-limit | — | Per-IP throttling, configurable per route |
+| @fastify/multipart | — | Multipart form data for file uploads |
+| Cloudinary | — | CDN file storage (images, PDFs, videos) |
+| bcryptjs | — | Password hashing (12 rounds default) |
 
 ### Folder structure
 
 ```
 server/src/
 ├── config/
-│   ├── env.ts         # Zod-validated environment — fails fast at startup
-│   ├── prisma.ts      # Prisma client + adapter singleton (global for hot-reload safety)
-│   └── logger.ts      # Pino logger config (pretty in dev, JSON in prod)
+│   ├── env.ts        # Zod-validated env — process exits with clear error if vars missing
+│   ├── prisma.ts     # PrismaPg adapter singleton (global for hot-reload safety)
+│   ├── logger.ts     # Pino config (pretty in dev, JSON in prod)
+│   ├── socket.ts     # Socket.IO server init + namespace setup
+│   ├── redis.ts      # ioredis client singleton
+│   └── queues/       # BullMQ queue + worker definitions
+│       ├── notification.queue.ts
+│       └── email.queue.ts
+│
 ├── lib/
-│   ├── password.ts    # hashPassword, comparePassword
-│   ├── token.ts       # generateRefreshToken (opaque random bytes)
-│   ├── response.ts    # sendSuccess, sendError, sendPaginated — standardised API envelope
-│   ├── pagination.ts  # parsePagination, toPaginatedResult, toSkipTake helpers
-│   └── sanitize.ts    # stripHtml — applied to bio/name before DB write
+│   ├── password.ts   # hashPassword, comparePassword
+│   ├── token.ts      # generateRefreshToken (40-byte opaque hex)
+│   ├── response.ts   # sendSuccess, sendError, sendPaginated — API envelope helpers
+│   ├── pagination.ts # parsePagination, toPaginatedResult, toSkipTake
+│   └── sanitize.ts   # stripHtml — applied to bio/name before DB write
+│
 ├── middlewares/
-│   ├── auth.hooks.ts    # authenticate + requireRole factory — importable preHandler hooks
-│   └── error.handler.ts # Centralised Fastify error handler
-├── modules/           # Feature modules — self-contained
-│   ├── auth/
-│   │   ├── auth.schemas.ts    # Zod schemas + inferred types
-│   │   ├── auth.service.ts    # Business logic + DB access
-│   │   ├── auth.controller.ts # HTTP layer — parse, delegate, respond
-│   │   └── auth.routes.ts     # Fastify plugin — registers routes with per-route rate limits
-│   └── users/
-│       ├── users.schemas.ts    # Zod schemas for profile update, list query, ID param
-│       ├── users.repository.ts # DB queries only — no business logic
-│       ├── users.service.ts    # Business logic — follow validation, pagination
-│       ├── users.controller.ts # HTTP layer — parse, delegate, respond, error mapping
-│       └── users.routes.ts     # Fastify plugin — public + authenticated routes
-├── types/
-│   └── index.ts       # JwtPayload, SafeUser + @fastify/jwt module augmentation
-├── app.ts             # Fastify app factory (testable without starting server)
-└── server.ts          # Entry point — starts server, handles signals
-
-server/prisma.config.ts   # Prisma CLI config (datasource URL for migrate/db push)
-server/prisma/
-└── schema.prisma         # Database schema (no URL — managed by prisma.config.ts)
+│   ├── auth.hooks.ts     # authenticate preHandler + requireRole factory
+│   └── error.handler.ts  # Centralised Fastify error handler (ZodError → 400)
+│
+├── modules/           # 15 self-contained feature modules
+│   └── [feature]/
+│       ├── [feature].schemas.ts    # Zod schemas, inferred TypeScript types
+│       ├── [feature].repository.ts # DB queries only — no business logic
+│       ├── [feature].service.ts    # Business logic, validation, orchestration
+│       ├── [feature].controller.ts # HTTP: parse → call service → set cookies → respond
+│       └── [feature].routes.ts     # Fastify plugin — registers routes + hooks
+│
+├── test/
+│   ├── helpers/
+│   │   ├── auth.ts       # signTestToken, TEST_USER fixture
+│   │   └── factories.ts  # makeUser, makePost, makeLostFoundItem, makeRefreshToken
+│   └── setup.ts          # Vitest global setup
+│
+├── workers/
+│   ├── notification.worker.ts  # BullMQ worker — fan-out notifications via Socket.IO
+│   └── email.worker.ts         # BullMQ worker — transactional email delivery
+│
+├── app.ts             # createApp() factory — used by both server.ts and tests
+└── server.ts          # Entry point: calls createApp(), starts server, handles SIGTERM
 ```
 
 ### Module pattern
 
-Each feature is a **self-contained module** with its own schemas, service, controller, and routes. The controller is responsible only for HTTP concerns (parsing, responding, setting cookies). Business logic and DB access live in the service. This separation makes testing straightforward.
+Every feature follows the same four-layer pattern:
 
 ```
-Request
-  │
-  ▼ auth.routes.ts       ← Fastify plugin, registers routes, applies hooks
-  │
-  ▼ auth.controller.ts   ← Parse body, call service, set cookies, respond
-  │
-  ▼ auth.service.ts      ← Business rules, DB queries via Prisma
-  │
-  ▼ prisma.ts            ← Prisma client → PostgreSQL
+HTTP Request
+    │
+    ▼  [feature].routes.ts     ← Fastify plugin, registers routes, attaches preHandlers
+    │
+    ▼  [feature].controller.ts ← Parse body/params/query, call service, send response
+    │
+    ▼  [feature].service.ts    ← Business rules (auth checks, domain invariants)
+    │
+    ▼  [feature].repository.ts ← Prisma queries — pure DB access, no business logic
+    │
+    ▼  prisma.ts               ← Prisma client → PostgreSQL
 ```
+
+This separation means:
+- Tests can import the service or repository in isolation
+- Route tests use `app.inject()` without binding a port
+- Controllers have no logic — they are pure adapters between HTTP and the service layer
 
 ### Authentication flow (server)
 
 ```
-Register/Login
-├── Validate body (Zod)
-├── Create/verify user in DB
-├── Sign JWT (15m expiry) with { sub, email, role }
-├── Generate opaque refresh token → store in DB with 7d expiry
-├── Set refresh token as httpOnly cookie (scoped to /api/auth)
+Register / Login
+├── Validate body (Zod schema)
+├── Hash password / verify password hash (bcrypt)
+├── Sign JWT: { sub: userId, email, role } — 15m expiry
+├── Generate opaque refresh token → persist in DB with 7d expiry
+├── Set cookie: httpOnly, SameSite=Lax, path=/api/auth/refresh
 └── Return { accessToken, user } in response body
 
-/auth/refresh
-├── Read refresh token from cookie
-├── Find in DB, check expiry
-├── Atomic rotation: delete old, create new token in DB
+POST /api/auth/refresh
+├── Read refresh token from httpOnly cookie
+├── Find token in DB, check expiresAt
+├── Atomic rotation: DELETE old row, INSERT new row (in one transaction)
 ├── Sign new JWT
-├── Set new refresh token cookie
+├── Set new httpOnly cookie
 └── Return { accessToken, user }
 
-/auth/me  (protected)
-├── fastify.authenticate hook → request.jwtVerify()
+GET /api/auth/me  (protected)
+├── authenticate preHandler → fastify.jwtVerify()
 ├── Look up user by request.user.sub
-└── Return safe user object (no password)
+└── Return safe user (password field excluded)
 
-/auth/logout
+POST /api/auth/logout
 ├── Read refresh token from cookie
 ├── Delete from DB (server-side revocation)
-└── Clear cookie
+└── Clear cookie with expired maxAge
 ```
 
-### Environment validation
-
-The server validates all required environment variables at startup using Zod. Missing or invalid variables cause an immediate process exit with a clear error message before any connections are established. This prevents silent misconfigurations in production.
-
----
-
-## Database Design (Phase 2)
-
-Phase 2 includes only the auth-relevant tables. Further entities are added per phase.
-
-### Current schema
+### Real-time architecture
 
 ```
-User
-├── id          cuid (PK)
-├── email       unique
-├── name        varchar(50)
-├── password    bcrypt hash (never returned in APIs)
-├── rollNumber  unique, nullable
-├── college     nullable
-├── branch      nullable
-├── year        int, nullable
-├── bio         text, nullable
-├── avatarUrl   nullable
-├── role        enum(STUDENT, ALUMNI, MODERATOR, ADMIN)
-├── links       JSONB { github?, linkedin?, portfolio? }
-└── timestamps
-
-RefreshToken
-├── id          cuid (PK)
-├── token       unique (random 40-byte hex)
-├── userId      FK → User.id (CASCADE DELETE)
-├── expiresAt   datetime
-└── createdAt
+Client                     Server (Socket.IO)          Redis
+  │                              │                       │
+  │──── connect ────────────────►│                       │
+  │     (with Bearer token)      │──── auth middleware ──►│
+  │                              │                       │
+  │◄──── join user room ─────────│  users:{userId}       │
+  │◄──── join convo rooms ───────│  conv:{id}            │
+  │                              │                       │
+  │──── sendMessage ────────────►│                       │
+  │                              │──── publish ─────────►│ (pub/sub)
+  │                              │◄──── subscribe ───────│
+  │◄──── newMessage ─────────────│  (all server nodes)   │
+  │                              │                       │
+  │                              │──── BullMQ job ───────►│ (queue)
+  │                              │◄──── worker runs ──────│
+  │◄──── notification ───────────│                       │
 ```
 
-### Why PostgreSQL over MongoDB
+Socket.IO namespaces:
+- `/notifications` — follow, reaction, comment notifications
+- `/chat` — conversation messages, typing indicators, read receipts
 
-The Studium data model has strong relational requirements that benefit from PostgreSQL:
-
-- **Votes**: `UNIQUE(userId, postId)` — one vote per user per post, enforced at DB level
-- **Follows**: `UNIQUE(followerId, followingId)` — no duplicate follow relationships
-- **Memberships**: `UNIQUE(groupId, userId)` with role — roles enforced at constraint level
-- **Feed queries**: JOIN-heavy (posts + votes + authors + groups) — PostgreSQL index joins outperform MongoDB lookups at scale
-- **Transactions**: Atomic refresh token rotation (delete old + create new) requires ACID guarantees
+Redis is used for:
+- Socket.IO adapter (`@socket.io/redis-adapter`) for horizontal scaling
+- User presence tracking (`SET users:{id}:online 1 EX 60`)
+- BullMQ job queue storage
 
 ---
 
 ## API Response Standard
 
-All API endpoints return a consistent envelope:
+All endpoints return a consistent JSON envelope:
 
 ```typescript
 // Success
-{ "success": true, "data": <T> }
+{ "success": true, "data": T }
+
+// Paginated success
+{ "success": true, "data": { "items": T[], "total": number, "page": number, "limit": number, "hasMore": boolean } }
 
 // Error
 { "success": false, "error": { "message": string } }
 ```
 
-HTTP status codes are used correctly:
-- `200` GET success / action success
-- `201` Resource created
-- `400` Validation error (client mistake)
-- `401` Unauthenticated
-- `403` Unauthorized (authenticated but insufficient role)
-- `404` Resource not found
-- `409` Conflict (duplicate email, etc.)
-- `429` Rate limit exceeded
-- `500` Unexpected server error
+HTTP status codes:
+
+| Code | Meaning |
+|------|---------|
+| 200 | Success (GET, action) |
+| 201 | Resource created |
+| 400 | Validation error |
+| 401 | Unauthenticated |
+| 403 | Authenticated but insufficient permission |
+| 404 | Resource not found |
+| 409 | Conflict (duplicate) |
+| 429 | Rate limit exceeded |
+| 500 | Unexpected server error |
 
 ---
 
-## Security Decisions
+## Database design rationale
 
-| Decision | Rationale |
-|----------|-----------|
-| Access token in memory (not localStorage) | Eliminates XSS token theft |
-| Refresh token as httpOnly cookie | JavaScript cannot read it; auto-sent by browser |
-| Refresh token scoped to `/api/auth` path | Cookie not sent on unrelated API calls |
-| Refresh token rotation | Stolen token immediately invalidated on next legitimate use |
-| CORS restricted to `CORS_ORIGIN` env var | Blocks cross-origin requests from unknown domains |
-| Helmet on all responses | 15+ security headers (HSTS, CSP, no-sniff, frameguard) |
-| Rate limiting (120 req/min global) | Protects against brute-force and DoS |
-| `bcrypt` with 12 rounds | Strong enough to slow brute-force; fast enough for auth endpoints |
-| Environment validation at startup | Prevents silent misconfiguration |
+PostgreSQL was chosen over MongoDB for Studium's specific requirements:
 
----
-
-## Scalability Notes
-
-- **Stateless auth**: Access tokens are JWTs — no server-side session store needed. The server can scale horizontally without sticky sessions.
-- **Refresh token in DB**: Enables revocation (logout all devices, ban user) and detection of token theft via rotation anomalies.
-- **Prisma connection pooling**: The global singleton pattern ensures one connection pool per Node.js process. In production, use PgBouncer for connection pooling before PostgreSQL.
-- **Module-per-feature structure**: Adding a new feature (posts, groups, etc.) is a self-contained addition. No existing modules are touched.
-- **TanStack Query**: Server state is cached and invalidated declaratively. Background refetching, pagination, and optimistic updates can be added per-query without global refactoring.
+| Requirement | Why relational beats document |
+|-------------|------------------------------|
+| One vote per user per post | `UNIQUE(userId, postId, type)` at DB level — no app-layer enforcement needed |
+| No duplicate follows | `UNIQUE(followerId, followingId)` — constraint prevents double-follow even under race conditions |
+| Refresh token rotation | Atomic `DELETE` + `INSERT` in one transaction — ACID guarantees |
+| Feed queries | JOIN across posts + reactions + authors + tags — indexed JOINs at scale |
+| Role-based access | Enum column + `@@index([role])` — efficient permission filtering |
+| Conversation membership | `UNIQUE(conversationId, userId)` — prevents double-join |
 
 ---
 
-## Phase 3 Additions (Completed)
+## Scalability notes
 
-- `server/src/modules/users/` — profile CRUD, follow/unfollow, follower/following lists
-- `server/src/middlewares/auth.hooks.ts` — importable `authenticate` + `requireRole` factory
-- `server/src/lib/pagination.ts` — offset pagination helpers (parsePagination, toPaginatedResult, toSkipTake)
-- `server/src/lib/sanitize.ts` — HTML stripping before DB writes
-- Prisma 7 migration — `prisma.config.ts` with `PrismaPg` adapter, removed URL from schema.prisma
-- Per-route rate limiting on auth mutation endpoints (10 req/min)
-- `client/src/api/users.ts` — typed client functions for all users endpoints
-- `client/src/types/index.ts` — `UserProfile`, `PaginatedData`, `UserLinks`, fixed `Role` enum
-
-## Phase 4 Planned Additions
-
-- `server/src/modules/posts/` — feed, CRUD, votes, comments
-- `server/src/modules/resources/` — file uploads (Cloudinary)
-- `server/src/modules/groups/` — group management, memberships
-- `server/src/modules/notifications/` — notification persistence
-- Email service integration (Resend or Nodemailer)
-- Request ID tracing for observability
+- **Stateless auth**: Access tokens are JWTs — no session store. The API can scale horizontally behind a load balancer.
+- **Refresh tokens in DB**: Enables full revocation (logout all devices, ban user, rotation anomaly detection).
+- **Socket.IO Redis adapter**: Pub/sub lets multiple Node processes share real-time events without sticky sessions.
+- **BullMQ workers**: Notification fan-out and email delivery run in separate processes, keeping request latency low.
+- **Prisma connection pooling**: One pool per Node process; use PgBouncer in production for connection management before PostgreSQL.
+- **Feature module isolation**: Each module is self-contained — adding or removing a feature does not touch other modules.

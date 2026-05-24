@@ -2,18 +2,28 @@
 
 > "Notion + Reddit + LinkedIn — for your college."
 
-A student ecosystem platform combining knowledge sharing, community discussions, mentorship, networking, resource sharing, and project collaboration.
+A full-stack student ecosystem platform combining community feed, knowledge sharing, Q&A, messaging, campus life, lost & found, and opportunities — all scoped to your college and branch.
 
 ---
 
-## Current Status: Phase 2 Complete
+## Current Status
 
-- ✅ **Authentication** — register, login, refresh token rotation, logout
-- ✅ **TypeScript** — strict end-to-end (both client and server)
-- ✅ **Fastify backend** — modular plugin architecture
-- ✅ **PostgreSQL + Prisma** — relational schema, migrations
-- ✅ **React Query + React Hook Form + Zod** — typed data fetching and forms
-- 🚧 **Dashboard features** — coming in Phase 4
+| Layer | Status |
+|-------|--------|
+| Auth (register, login, refresh rotation, logout) | ✅ |
+| User profiles, follow system | ✅ |
+| Posts, feed (college/branch-scoped), reactions, comments, bookmarks | ✅ |
+| Lost & Found (create, claim, resolve, image upload) | ✅ |
+| Knowledge Hub (resources, ratings, bookmarks, downloads) | ✅ |
+| Q&A (questions, answers, voting, accept answer) | ✅ |
+| Opportunities (jobs, internships, hackathons, events) | ✅ |
+| Campus Reviews (faculty, food, transport, facilities) | ✅ |
+| Messaging (1-to-1 and group conversations) | ✅ |
+| Notifications (follow, reaction, comment) | ✅ |
+| File uploads (Cloudinary — images, PDFs, videos) | ✅ |
+| Real-time (Socket.IO, Redis pub/sub, presence) | ✅ |
+| Background jobs (BullMQ — notification fan-out, email) | ✅ |
+| Testing (87 unit + integration tests, CI/CD) | ✅ |
 
 ---
 
@@ -21,14 +31,19 @@ A student ecosystem platform combining knowledge sharing, community discussions,
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 19, TypeScript, Vite, TailwindCSS v4 |
-| Data fetching | TanStack Query v5 |
+| Frontend | React 19, TypeScript, Vite 7, TailwindCSS v4 |
+| Data fetching | TanStack Query v5 (infinite scroll, optimistic updates) |
 | Forms | React Hook Form + Zod |
-| UI components | shadcn/ui (Radix + Tailwind) |
-| Backend | Fastify 4, TypeScript, Node.js |
-| Database | PostgreSQL + Prisma ORM |
-| Auth | JWT (access token) + httpOnly cookie (refresh token) |
-| Security | Helmet, rate limiting, bcrypt (12 rounds) |
+| Backend | Fastify 5, TypeScript, Node.js 20 |
+| Database | PostgreSQL 15+ via Prisma 7 (`@prisma/adapter-pg`) |
+| Cache / Pub-Sub | Redis 7 (presence, socket scaling, queue backend) |
+| Real-time | Socket.IO 4 (namespaces: `/notifications`, `/chat`) |
+| Job queues | BullMQ (notification fan-out, email delivery) |
+| Auth | JWT access token (memory-only) + httpOnly cookie refresh token |
+| File storage | Cloudinary (images, PDFs, videos) |
+| Security | Helmet, rate limiting (120/min global, 10/min auth), bcrypt |
+| Testing | Vitest (server + client), RTL, MSW v2, Playwright |
+| CI/CD | GitHub Actions (server → client → E2E pipeline) |
 
 ---
 
@@ -36,105 +51,128 @@ A student ecosystem platform combining knowledge sharing, community discussions,
 
 ```
 studium-app/
-├── client/                 # React frontend
+├── client/                    # React SPA
 │   ├── src/
-│   │   ├── api/            # API client functions
-│   │   ├── components/
-│   │   │   ├── ui/         # shadcn/ui primitives
-│   │   │   └── auth/       # Auth-specific components
-│   │   ├── context/        # AuthContext
-│   │   ├── features/       # (Phase 4+) Feature modules
-│   │   ├── hooks/          # Custom hooks
-│   │   ├── lib/            # Utils, validators, QueryClient
-│   │   ├── pages/          # Route-level pages
-│   │   ├── routes/         # Route guards
-│   │   ├── types/          # Shared TypeScript types
-│   │   └── utils/          # axiosInstance
-│   └── ...
+│   │   ├── api/               # Typed axios wrappers per feature
+│   │   ├── components/        # ui/ (shadcn) + shared components
+│   │   ├── context/           # AuthContext (token + user state)
+│   │   ├── features/          # Feature modules (feed/, posts/, chat/, notifications/)
+│   │   ├── hooks/             # useAuth, useFeed, usePosts, useReactions, …
+│   │   ├── pages/             # Route-level components
+│   │   ├── routes/            # PrivateRoute guard
+│   │   ├── test/              # MSW handlers, RTL helpers, setup
+│   │   ├── types/             # Shared TypeScript interfaces
+│   │   └── utils/             # axiosInstance + interceptors
+│   └── vitest.config.ts
 │
-├── server/                 # Fastify backend
+├── server/                    # Fastify API
 │   ├── src/
-│   │   ├── config/         # env validation, Prisma client, logger
-│   │   ├── lib/            # password, token, response helpers
-│   │   ├── middlewares/    # error handler
-│   │   ├── modules/
-│   │   │   └── auth/       # routes, controller, service, schemas
-│   │   ├── types/          # Shared TypeScript types + module augmentation
-│   │   ├── app.ts          # Fastify app factory
-│   │   └── server.ts       # Entry point
+│   │   ├── config/            # env (Zod), prisma client, logger, socket, redis, queues
+│   │   ├── lib/               # password, token, response, pagination, sanitize
+│   │   ├── middlewares/       # auth.hooks, error.handler
+│   │   ├── modules/           # One directory per feature (15 modules)
+│   │   │   ├── auth/
+│   │   │   ├── users/
+│   │   │   ├── feed/
+│   │   │   ├── posts/
+│   │   │   ├── comments/
+│   │   │   ├── reactions/
+│   │   │   ├── tags/
+│   │   │   ├── notifications/
+│   │   │   ├── messaging/
+│   │   │   ├── knowledge/
+│   │   │   ├── qna/
+│   │   │   ├── opportunities/
+│   │   │   ├── campus/
+│   │   │   ├── lostfound/
+│   │   │   └── upload/
+│   │   ├── test/              # Vitest helpers (factories, JWT signer, setup)
+│   │   ├── workers/           # BullMQ notification + email workers
+│   │   ├── app.ts             # Fastify factory (used by tests and server)
+│   │   └── server.ts          # Entry point
 │   ├── prisma/
-│   │   └── schema.prisma   # Database schema
-│   └── ...
+│   │   └── schema.prisma
+│   └── vitest.config.ts
 │
-└── docs/                   # Architecture docs
+├── e2e/                       # Playwright end-to-end tests
+├── .github/workflows/ci.yml  # CI pipeline
+├── docs/                      # Architecture and API documentation
+├── TESTING.md                 # Test strategy and quick-start guide
+└── package.json               # Root — runs both client + server scripts
 ```
 
 ---
 
-## Setup
+## Quick Start
 
 ### Prerequisites
 
 - Node.js 20+
-- PostgreSQL 15+ (running locally or via Docker)
+- PostgreSQL 15+ (local or Docker)
+- Redis 7+ (local or Docker)
+- Cloudinary account (free tier is sufficient)
 
-### 1. Clone and install
+### 1. Install
 
 ```bash
-git clone <repo>
+git clone https://github.com/Therajat14/studium-app.git
 cd studium-app
-npm install          # installs root devDeps (concurrently)
-npm run install:all  # installs client + server dependencies
+npm install --prefix client
+npm install --prefix server
 ```
 
 ### 2. Configure environment
 
 ```bash
-# Server
 cp server/.env.example server/.env
-# Edit server/.env — set DATABASE_URL and JWT_SECRET
-
-# Client (optional — defaults to localhost:5000)
-cp client/.env.example client/.env
+# Edit server/.env with your values (see Environment Variables below)
 ```
 
-### 3. Set up database
+### 3. Database setup
 
 ```bash
-# Create the database, run migrations, generate Prisma client
-npm run db:migrate
+cd server
+npx prisma migrate deploy   # Run all migrations
+npx prisma generate         # Generate Prisma client
 ```
 
 ### 4. Run in development
 
 ```bash
+# From root — starts both client and server concurrently
 npm run dev
+
 # Client → http://localhost:5173
 # Server → http://localhost:5000
-# Health check → http://localhost:5000/health
+# Health → http://localhost:5000/health
 ```
 
 ---
 
-## API
+## Scripts
 
-Base URL: `http://localhost:5000/api`
+```bash
+# Root
+npm run dev            # Start client + server concurrently
+npm test               # Run server tests, then client tests
+npm run typecheck      # tsc --noEmit on both sides
+npm run lint           # ESLint both sides
+npm run e2e            # Playwright end-to-end suite
 
-All responses follow the shape:
-```json
-{ "success": true, "data": { ... } }
-{ "success": false, "error": { "message": "..." } }
+# Server  (cd server)
+npm run dev            # tsx watch src/server.ts
+npm run build          # tsc → dist/
+npm test               # vitest run
+npm run test:coverage  # vitest run --coverage
+npm run db:migrate     # prisma migrate dev
+npm run db:studio      # Open Prisma Studio
+
+# Client  (cd client)
+npm run dev            # Vite dev server
+npm run build          # tsc -b && vite build
+npm test               # vitest run
+npm run test:coverage  # vitest run --coverage
 ```
-
-### Auth endpoints
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `POST` | `/auth/register` | — | Create account |
-| `POST` | `/auth/login` | — | Sign in |
-| `POST` | `/auth/refresh` | cookie | Rotate refresh token, get new access token |
-| `GET` | `/auth/me` | Bearer | Get current user |
-| `POST` | `/auth/logout` | — | Revoke refresh token |
 
 ---
 
@@ -142,51 +180,77 @@ All responses follow the shape:
 
 ### Server (`server/.env`)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | ✅ | PostgreSQL connection string |
-| `JWT_SECRET` | ✅ | Min 32 chars — use `openssl rand -base64 32` |
-| `PORT` | — | Defaults to `5000` |
-| `JWT_ACCESS_EXPIRY` | — | Defaults to `15m` |
-| `JWT_REFRESH_EXPIRY` | — | Defaults to `7d` |
-| `BCRYPT_SALT_ROUNDS` | — | Defaults to `12` |
-| `CORS_ORIGIN` | — | Defaults to `http://localhost:5173` |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_URL` | ✅ | — | PostgreSQL connection string |
+| `JWT_SECRET` | ✅ | — | Min 32 chars — `openssl rand -base64 32` |
+| `REDIS_URL` | ✅ | — | `redis://localhost:6379` |
+| `CLOUDINARY_CLOUD_NAME` | ✅ | — | Cloudinary account name |
+| `CLOUDINARY_API_KEY` | ✅ | — | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | ✅ | — | Cloudinary API secret |
+| `PORT` | — | `5000` | HTTP listen port |
+| `JWT_ACCESS_EXPIRY` | — | `15m` | Access token lifetime |
+| `JWT_REFRESH_EXPIRY` | — | `7d` | Refresh token lifetime |
+| `BCRYPT_SALT_ROUNDS` | — | `12` | bcrypt cost factor |
+| `CORS_ORIGIN` | — | `http://localhost:5173` | Allowed CORS origin |
+| `UPLOAD_MAX_IMAGE_BYTES` | — | `10485760` | Max image size (10 MB) |
+| `UPLOAD_MAX_VIDEO_BYTES` | — | `104857600` | Max video size (100 MB) |
 
 ### Client (`client/.env`)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `VITE_API_URL` | — | Defaults to `http://localhost:5000/api` |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VITE_API_URL` | — | `http://localhost:5000/api` | API base URL |
+| `VITE_SOCKET_URL` | — | `http://localhost:5000` | Socket.IO server URL |
 
 ---
 
-## Development Scripts
+## API Overview
 
-```bash
-npm run dev              # Start both client and server
-npm run typecheck        # Run tsc --noEmit on both sides
-npm run lint             # ESLint both sides
-npm run db:migrate       # Run Prisma migrations
-npm run db:studio        # Open Prisma Studio (DB GUI)
+Base URL: `http://localhost:5000/api`
+
+All responses use a consistent envelope:
+```json
+{ "success": true,  "data": { ... } }
+{ "success": false, "error": { "message": "..." } }
 ```
 
+| Prefix | Module | Auth |
+|--------|--------|------|
+| `GET /health` | — | Public |
+| `/api/auth/*` | Authentication | Mixed |
+| `/api/users/*` | Profiles + follows | Mixed |
+| `/api/feed` | Scoped feed | Public |
+| `/api/posts/*` | Posts + bookmarks | Mixed |
+| `/api/posts/:id/comments` | Comments | Mixed |
+| `/api/posts/:id/reactions` | Post reactions | Bearer |
+| `/api/comments/:id/reactions` | Comment reactions | Bearer |
+| `/api/tags/*` | Tag browsing | Public |
+| `/api/notifications/*` | Notifications | Bearer |
+| `/api/messages/*` | Conversations + DMs | Bearer |
+| `/api/knowledge/*` | Knowledge Hub | Bearer |
+| `/api/qna/*` | Q&A board | Bearer |
+| `/api/opportunities/*` | Jobs + events | Bearer |
+| `/api/campus/*` | Campus reviews | Bearer |
+| `/api/lostfound/*` | Lost & Found | Bearer |
+| `/api/upload` | File upload (Cloudinary) | Bearer |
+
+See [`docs/API.md`](docs/API.md) for the complete endpoint reference.
+
 ---
 
-## Roadmap
+## Architecture
 
-| Phase | Status | Description |
-|-------|--------|-------------|
-| 1 | ✅ | Repository analysis, architecture planning |
-| 2 | ✅ | TypeScript migration, Fastify backend, auth system |
-| 3 | 🔜 | Complete backend APIs, additional security hardening |
-| 4 | 🔜 | Posts, feed, profiles, resources, groups |
-| 5 | 🔜 | Real-time (Socket.IO), notifications, messaging |
-| 6 | 🔜 | Tests, search, CI/CD, deployment |
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for system design, auth flow, real-time architecture, and module patterns.
 
-See [`docs/roadmap.md`](docs/roadmap.md) for detailed feature plans.
+## Testing
 
----
+See [`TESTING.md`](TESTING.md) for the full test strategy, running tests, coverage targets, and CI/CD pipeline.
 
-## Contributing
+## Database
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for coding standards, git workflow, and conventions.
+See [`docs/DATABASE.md`](docs/DATABASE.md) for the full schema with all 30+ models.
+
+## Security
+
+See [`docs/SECURITY.md`](docs/SECURITY.md) for security decisions and rationale.
