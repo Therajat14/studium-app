@@ -43,6 +43,70 @@ const getServerMessage = (err: unknown): string | null => {
   return e?.response?.data?.error?.message ?? null
 }
 
+// ─── Dehradun colleges list ────────────────────────────────────────────────
+
+const COLLEGES = [
+  'Graphic Era University (GEU)',
+  'UPES (University of Petroleum and Energy Studies)',
+  'DIT University',
+  'Uttaranchal University',
+  'Doon University',
+  'Graphic Era Hill University (GEHU)',
+  'Dev Bhoomi Uttarakhand University (DBUU)',
+  'Shri Guru Ram Rai University (SGRRU)',
+  'IMS Unison University',
+  'Quantum University',
+  'Himalayan Institute of Technology',
+  'Women\'s Institute of Technology, Dehradun',
+  'College of Technology, GBPUA&T',
+  'IIT Roorkee',
+  'NIT Uttarakhand',
+  'Delhi University',
+  'Jawaharlal Nehru University (JNU)',
+  'IIT Delhi',
+  'IIT Bombay',
+  'Anna University',
+  'Other',
+]
+
+const BRANCHES = [
+  // B.Tech
+  'B.Tech Computer Science Engineering (CSE)',
+  'B.Tech Computer Science & IT',
+  'B.Tech Information Technology (IT)',
+  'B.Tech Electronics & Communication Engineering (ECE)',
+  'B.Tech Mechanical Engineering (ME)',
+  'B.Tech Civil Engineering (CE)',
+  'B.Tech Electrical Engineering (EE)',
+  'B.Tech Chemical Engineering',
+  'B.Tech Petroleum Engineering',
+  'B.Tech Biotechnology',
+  'B.Tech Aerospace Engineering',
+  // BCA/MCA
+  'BCA (Bachelor of Computer Applications)',
+  'MCA (Master of Computer Applications)',
+  // MBA/BBA
+  'MBA (Master of Business Administration)',
+  'BBA (Bachelor of Business Administration)',
+  // B.Sc
+  'B.Sc Computer Science',
+  'B.Sc Physics',
+  'B.Sc Mathematics',
+  'B.Sc Chemistry',
+  'B.Sc Biotechnology',
+  // M.Tech
+  'M.Tech CSE',
+  'M.Tech ECE',
+  'M.Tech Mechanical',
+  // Others
+  'B.Pharma',
+  'M.Pharma',
+  'LLB / B.A. LLB',
+  'B.Arch',
+  'Ph.D',
+  'Other',
+]
+
 // ─── Shared field component ────────────────────────────────────────────────
 
 const Field = ({
@@ -60,6 +124,34 @@ const Field = ({
         {...props}
       />
       {rightSlot && <div className="absolute right-2 top-1/2 -translate-y-1/2">{rightSlot}</div>}
+    </div>
+    {error && (
+      <p className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
+        <AlertCircle className="h-3 w-3 shrink-0" />{error}
+      </p>
+    )}
+  </div>
+)
+
+const SelectField = ({
+  Icon, label, id, error, options, placeholder, ...props
+}: { Icon: React.ElementType; label: string; id: string; error?: string; options: string[]; placeholder?: string } & React.ComponentProps<'select'>) => (
+  <div className="space-y-1.5">
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+      {label}
+    </label>
+    <div className="relative">
+      <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none z-10" />
+      <select
+        id={id}
+        className={`w-full pl-10 pr-4 py-3 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary focus:border-transparent transition text-sm appearance-none ${error ? 'border-red-400' : ''}`}
+        {...props}
+      >
+        <option value="">{placeholder ?? `Select ${label}`}</option>
+        {options.map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
     </div>
     {error && (
       <p className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
@@ -240,9 +332,11 @@ const AuthForm = () => {
 
           {step === 2 && (
             <>
-              <Field Icon={School} label="College / University" id="college" type="text" placeholder="Stanford University"
+              <SelectField Icon={School} label="College / University" id="college"
+                options={COLLEGES} placeholder="Select your college"
                 {...regForm.register('college')} />
-              <Field Icon={BookOpen} label="Branch / Department" id="branch" type="text" placeholder="Computer Science"
+              <SelectField Icon={BookOpen} label="Branch / Department" id="branch"
+                options={BRANCHES} placeholder="Select your branch"
                 {...regForm.register('branch')} />
               <div className="space-y-1.5">
                 <label htmlFor="year" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Year of Study</label>

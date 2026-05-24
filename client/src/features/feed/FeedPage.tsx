@@ -3,11 +3,20 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.js'
 import { Skeleton } from '@/components/ui/skeleton.js'
 import { useFeed } from '@/hooks/useFeed.js'
+import { useAuth } from '@/hooks/useAuth.js'
 import { socket } from '@/lib/socket.js'
 import { SocketEvent } from '@/lib/socketEvents.js'
 import { PostCard } from './PostCard.js'
 import { PostComposer } from './PostComposer.js'
 import type { FeedSort, FeedResponse, Post, PostType } from '@/types/index.js'
+
+type FeedScope = 'branch' | 'college' | 'everyone'
+
+const SCOPE_TABS: { value: FeedScope; label: string }[] = [
+  { value: 'branch',   label: 'My Branch' },
+  { value: 'college',  label: 'My College' },
+  { value: 'everyone', label: 'Everyone' },
+]
 
 const SORT_TABS: { value: FeedSort; label: string }[] = [
   { value: 'latest',    label: 'Latest' },
@@ -43,40 +52,45 @@ const PostCardSkeleton = () => (
 )
 
 export const FeedPage = () => {
-  const [sort, setSort] = useState<FeedSort>('latest')
+  const { user } = useAuth()
+  const [scope, setScope]       = useState<FeedScope>('branch')
+  const [sort, setSort]         = useState<FeedSort>('latest')
   const [typeFilter, setTypeFilter] = useState<PostType | undefined>(undefined)
   const loadMoreRef = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
 
+  // Derive college/branch params based on scope
+  const college = scope !== 'everyone' ? ((user as any)?.college ?? undefined) : undefined
+  const branch  = scope === 'branch'   ? ((user as any)?.branch  ?? undefined) : undefined
+
+  // For branch/college scope, force latest sort
+  const effectiveSort: FeedSort = scope !== 'everyone' ? 'latest' : sort
+
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } = useFeed(
-    sort,
+    effectiveSort,
     typeFilter,
+    college,
+    branch,
   )
 
   const posts = data?.pages.flatMap((page) => page.items) ?? []
 
   // ─── Realtime: new post ───────────────────────────────────────────────────
-  // Prepend to the 'latest' feed only — trending is score-based, following
-  // requires a followship check the client doesn't have. Invalidate others on
-  // next focus via TanStack Query's default refetchOnWindowFocus behaviour.
   useEffect(() => {
     const handler = (payload: { post: Post }) => {
-      if (sort !== 'latest') return // only patch the currently visible feed variant
+      // Only patch the feed if we're on 'everyone' + 'latest' to avoid stale scope data
+      if (scope !== 'everyone' || sort !== 'latest') return
       queryClient.setQueryData<{ pages: FeedResponse[]; pageParams: unknown[] }>(
-        ['feed', 'latest', typeFilter],
+        ['feed', 'latest', typeFilter, null, null],
         (old) => {
           if (!old) return old
           const firstPage = old.pages[0]
           if (!firstPage) return old
-          // Avoid duplicates (e.g. own post already added optimistically by useCreatePost)
           if (firstPage.items.some((p) => p.id === payload.post.id)) return old
           return {
             ...old,
             pages: [
-              {
-                ...firstPage,
-                items: [payload.post, ...firstPage.items],
-              },
+              { ...firstPage, items: [payload.post, ...firstPage.items] },
               ...old.pages.slice(1),
             ],
           }
@@ -85,9 +99,9 @@ export const FeedPage = () => {
     }
     socket.on(SocketEvent.FEED_NEW_POST, handler)
     return () => { socket.off(SocketEvent.FEED_NEW_POST, handler) }
-  }, [sort, typeFilter, queryClient])
+  }, [scope, sort, typeFilter, queryClient])
 
-  // ─── Realtime: reaction counts on visible posts ───────────────────────────
+  // ─── Realtime: reaction counts ───────────────────────────────────────────
   useEffect(() => {
     const handler = (payload: { postId: string; counts: Record<string, number> }) => {
       queryClient.setQueriesData<{ pages: FeedResponse[]; pageParams: unknown[] }>(
@@ -128,20 +142,39 @@ export const FeedPage = () => {
     return () => observer.disconnect()
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
+  const emptyMessage =
+    scope === 'branch'  ? 'No posts from your branch yet. Be the first!' :
+    scope === 'college' ? 'No posts from your college yet. Be the first!' :
+    sort   === 'following' ? 'Follow some people to see their posts here.' :
+    'No posts yet. Be the first to share something!'
+
   return (
     <div className="flex flex-col gap-4">
       <PostComposer />
 
-      {/* Sort tabs */}
-      <Tabs value={sort} onValueChange={(v) => setSort(v as FeedSort)}>
-        <TabsList>
-          {SORT_TABS.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>
+      {/* Scope tabs */}
+      <Tabs value={scope} onValueChange={(v) => { setScope(v as FeedScope); setSort('latest') }}>
+        <TabsList className="w-full">
+          {SCOPE_TABS.map((tab) => (
+            <TabsTrigger key={tab.value} value={tab.value} className="flex-1">
               {tab.label}
             </TabsTrigger>
           ))}
         </TabsList>
       </Tabs>
+
+      {/* Sub-sort tabs — only for 'everyone' scope */}
+      {scope === 'everyone' && (
+        <Tabs value={sort} onValueChange={(v) => setSort(v as FeedSort)}>
+          <TabsList>
+            {SORT_TABS.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      )}
 
       {/* Type filter chips */}
       <div className="flex flex-wrap gap-1.5">
@@ -160,6 +193,13 @@ export const FeedPage = () => {
         ))}
       </div>
 
+      {/* Scope label when branch/college has no user data */}
+      {scope !== 'everyone' && !college && (
+        <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          Add your college and branch in your profile to see personalized posts.
+        </div>
+      )}
+
       {/* Feed content */}
       {isLoading ? (
         <div className="flex flex-col gap-3">
@@ -173,11 +213,7 @@ export const FeedPage = () => {
         </div>
       ) : posts.length === 0 ? (
         <div className="border-border rounded-xl border p-8 text-center">
-          <p className="text-muted-foreground text-sm">
-            {sort === 'following'
-              ? 'Follow some people to see their posts here.'
-              : 'No posts yet. Be the first to share something!'}
-          </p>
+          <p className="text-muted-foreground text-sm">{emptyMessage}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -187,7 +223,6 @@ export const FeedPage = () => {
         </div>
       )}
 
-      {/* Infinite scroll sentinel */}
       <div ref={loadMoreRef} className="h-4" />
 
       {isFetchingNextPage && (

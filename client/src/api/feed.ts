@@ -6,6 +6,8 @@ export interface FeedParams {
   cursor?: string
   limit?: number
   type?: PostType
+  college?: string
+  branch?: string
 }
 
 export const feedApi = {

@@ -8,6 +8,8 @@ export const getLatestFeed = async (opts: {
   cursor?: string
   limit: number
   type?: PostType
+  college?: string
+  branch?: string
 }) => {
   const rows = await prisma.post.findMany({
     take: opts.limit + 1,
@@ -15,6 +17,12 @@ export const getLatestFeed = async (opts: {
     where: {
       deletedAt: null,
       ...(opts.type !== undefined && { type: opts.type }),
+      ...(opts.college !== undefined && {
+        author: {
+          college: opts.college,
+          ...(opts.branch !== undefined && { branch: opts.branch }),
+        },
+      }),
     },
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     select: postSelect,
@@ -33,6 +41,8 @@ export const getFollowingFeed = async (opts: {
   cursor?: string
   limit: number
   type?: PostType
+  college?: string
+  branch?: string
 }) => {
   const follows = await prisma.follow.findMany({
     where:  { followerId: opts.userId },
@@ -49,6 +59,12 @@ export const getFollowingFeed = async (opts: {
       authorId:  { in: followingIds },
       deletedAt: null,
       ...(opts.type !== undefined && { type: opts.type }),
+      ...(opts.college !== undefined && {
+        author: {
+          college: opts.college,
+          ...(opts.branch !== undefined && { branch: opts.branch }),
+        },
+      }),
     },
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     select: postSelect,
