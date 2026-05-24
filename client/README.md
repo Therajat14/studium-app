@@ -67,4 +67,4 @@ Tests use:
 - **MSW v2** for API mocking (handlers in `src/test/mocks/handlers.ts`)
 - **renderWithProviders** in `src/test/utils.tsx` — wraps components with `QueryClientProvider` + `MemoryRouter`
 
-See [TESTING.md](../TESTING.md) for the full test guide.
+See [TESTING.md](../docs/TESTING.md) for the full test guide.

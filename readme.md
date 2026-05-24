@@ -97,7 +97,7 @@ studium-app/
 ├── e2e/                       # Playwright end-to-end tests
 ├── .github/workflows/ci.yml  # CI pipeline
 ├── docs/                      # Architecture and API documentation
-├── TESTING.md                 # Test strategy and quick-start guide
+├── docs/TESTING.md            # Test strategy and quick-start guide
 └── package.json               # Root — runs both client + server scripts
 ```
 
@@ -245,7 +245,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for system design, auth flow,
 
 ## Testing
 
-See [`TESTING.md`](TESTING.md) for the full test strategy, running tests, coverage targets, and CI/CD pipeline.
+See [`docs/TESTING.md`](docs/TESTING.md) for the full test strategy, running tests, coverage targets, and CI/CD pipeline.
 
 ## Database
 

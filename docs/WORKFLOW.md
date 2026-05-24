@@ -145,7 +145,7 @@ HTTP Request
 
 ## Testing workflow
 
-See [TESTING.md](../TESTING.md) for the full guide.
+See [TESTING.md](TESTING.md) for the full guide.
 
 Quick commands:
 ```bash
