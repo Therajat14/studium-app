@@ -15,6 +15,8 @@ import {
   userListQuerySchema,
   userIdParamSchema,
 } from './users.schemas.js'
+import { createFollowNotification } from '../notifications/notifications.service.js'
+import { batchIsOnline } from '../../lib/socket/presence.store.js'
 
 // ─── Error → HTTP mapping ──────────────────────────────────────────────────
 
@@ -64,6 +66,7 @@ export const followUserHandler = async (request: FastifyRequest, reply: FastifyR
   const { id: targetId } = userIdParamSchema.parse(request.params)
   try {
     await followUser(callerId, targetId)
+    void createFollowNotification(callerId, targetId)
     return sendSuccess(reply, { message: 'Followed successfully' }, 200)
   } catch (err) {
     return handleUserError(err, reply)
@@ -101,4 +104,12 @@ export const getFollowingHandler = async (request: FastifyRequest, reply: Fastif
   } catch (err) {
     return handleUserError(err, reply)
   }
+}
+
+// GET /api/users/presence?userIds[]=...
+export const getPresenceHandler = async (request: FastifyRequest, reply: FastifyReply) => {
+  const query = request.query as { userIds?: string | string[] }
+  const raw   = query.userIds
+  const ids   = Array.isArray(raw) ? raw : raw ? [raw] : []
+  return sendSuccess(reply, batchIsOnline(ids.slice(0, 100)))
 }

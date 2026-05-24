@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router'
 import { ArrowLeft, Heart, MessageCircle, Trash2, FileImage, FileVideo, FileText } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Avatar } from '@/components/ui/avatar.js'
 import { Badge } from '@/components/ui/badge.js'
 import { Button } from '@/components/ui/button.js'
@@ -7,6 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton.js'
 import { usePost, useDeletePost } from '@/hooks/usePosts.js'
 import { useTogglePostReaction } from '@/hooks/useReactions.js'
 import { useAuth } from '@/hooks/useAuth.js'
+import { socket } from '@/lib/socket.js'
+import { SocketEvent } from '@/lib/socketEvents.js'
 import { CommentThread } from './CommentThread.js'
 import type { PostType, MediaType } from '@/types/index.js'
 
@@ -72,6 +76,26 @@ export const PostDetail = () => {
   if (!id) return null
 
   const isOwner = user?.id === post?.author.id
+
+  // Join/leave the post room so realtime comment + reaction events are received
+  useEffect(() => {
+    socket.emit(SocketEvent.ROOM_JOIN_POST, { postId: id })
+    return () => { socket.emit(SocketEvent.ROOM_LEAVE_POST, { postId: id }) }
+  }, [id])
+
+  // When someone else comments, bump the comment count on the post card in feed
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    const handler = (payload: { postId: string }) => {
+      if (payload.postId !== id) return
+      queryClient.setQueryData<{ id: string; _count: { reactions: number; comments: number } }>(
+        ['post', id],
+        (old) => old ? { ...old, _count: { ...old._count, comments: old._count.comments + 1 } } : old,
+      )
+    }
+    socket.on(SocketEvent.POST_NEW_COMMENT, handler)
+    return () => { socket.off(SocketEvent.POST_NEW_COMMENT, handler) }
+  }, [id, queryClient])
 
   return (
     <div className="bg-background min-h-screen">

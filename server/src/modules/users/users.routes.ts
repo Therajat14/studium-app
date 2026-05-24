@@ -8,6 +8,7 @@ import {
   unfollowUserHandler,
   getFollowersHandler,
   getFollowingHandler,
+  getPresenceHandler,
 } from './users.controller.js'
 
 export const usersRoutes = async (fastify: FastifyInstance) => {
@@ -15,6 +16,9 @@ export const usersRoutes = async (fastify: FastifyInstance) => {
 
   // GET /users?page=&limit=&search=&college=&role=
   fastify.get('/', listUsersHandler)
+
+  // GET /users/presence?userIds[]=... — static path must precede /:id
+  fastify.get('/presence', getPresenceHandler)
 
   // GET /users/:id
   fastify.get('/:id', getUserHandler)

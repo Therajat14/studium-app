@@ -18,6 +18,7 @@ import { feedRoutes } from './modules/feed/feed.routes.js'
 import { commentsOnPostRoutes, commentRoutes } from './modules/comments/comments.routes.js'
 import { postReactionRoutes, commentReactionRoutes } from './modules/reactions/reactions.routes.js'
 import { tagsRoutes } from './modules/tags/tags.routes.js'
+import { notificationsRoutes } from './modules/notifications/notifications.routes.js'
 
 export const createApp = async () => {
   const app = Fastify({ logger: loggerConfig })
@@ -75,6 +76,7 @@ export const createApp = async () => {
   await app.register(commentReactionRoutes,{ prefix: '/api/comments' })
   await app.register(feedRoutes,           { prefix: '/api/feed' })
   await app.register(tagsRoutes,           { prefix: '/api/tags' })
+  await app.register(notificationsRoutes,  { prefix: '/api/notifications' })
 
   return app
 }

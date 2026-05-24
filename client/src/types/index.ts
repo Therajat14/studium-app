@@ -107,6 +107,37 @@ export interface ReactionResult {
   counts: Record<ReactionType, number>
 }
 
+// ─── Notifications ─────────────────────────────────────────────────────────
+
+export type NotificationType =
+  | 'COMMENT'
+  | 'REPLY'
+  | 'FOLLOW'
+  | 'POST_REACTION'
+  | 'COMMENT_REACTION'
+
+export interface NotificationActor {
+  id:       string
+  name:     string
+  avatarUrl: string | null
+}
+
+export interface Notification {
+  id:         string
+  type:       NotificationType
+  entityId:   string
+  entityType: string
+  readAt:     string | null
+  createdAt:  string
+  actor:      NotificationActor
+}
+
+export interface NotificationsResponse {
+  items:      Notification[]
+  nextCursor: string | null
+  unread:     number
+}
+
 // ─── Pagination ────────────────────────────────────────────────────────────
 
 export interface PaginatedData<T> {

@@ -2,6 +2,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify'
 import { sendSuccess, sendError } from '../../lib/response.js'
 import { PostError, getPost, createNewPost, editPost, deletePost } from './posts.service.js'
 import { createPostSchema, updatePostSchema, postIdParamSchema } from './posts.schemas.js'
+import { emitNewPost } from '../../lib/socket/socket.gateway.js'
 import type { Role } from '@prisma/client'
 
 const handlePostError = (err: unknown, reply: FastifyReply) => {
@@ -23,8 +24,27 @@ export const getPostHandler = async (request: FastifyRequest, reply: FastifyRepl
 }
 
 export const createPostHandler = async (request: FastifyRequest, reply: FastifyReply) => {
-  const body  = createPostSchema.parse(request.body)
-  const post  = await createNewPost(request.user.sub, body)
+  const body = createPostSchema.parse(request.body)
+  const post = await createNewPost(request.user.sub, body)
+
+  // Broadcast new post to everyone subscribed to the public feed room.
+  // post may be null if findPostById races with the just-created row; in that
+  // rare case we skip the socket event — the feed will catch it on next refetch.
+  if (post) {
+    emitNewPost({
+      post: {
+        id:        post.id,
+        title:     post.title,
+        content:   post.content,
+        type:      post.type,
+        createdAt: post.createdAt,
+        author:    post.author,
+        tags:      post.tags,
+        _count:    post._count,
+      },
+    })
+  }
+
   return sendSuccess(reply, post, 201)
 }
 

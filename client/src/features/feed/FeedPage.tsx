@@ -1,24 +1,26 @@
 import { useState, useEffect, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs.js'
-import { Badge } from '@/components/ui/badge.js'
 import { Skeleton } from '@/components/ui/skeleton.js'
 import { useFeed } from '@/hooks/useFeed.js'
+import { socket } from '@/lib/socket.js'
+import { SocketEvent } from '@/lib/socketEvents.js'
 import { PostCard } from './PostCard.js'
 import { PostComposer } from './PostComposer.js'
-import type { FeedSort, PostType } from '@/types/index.js'
+import type { FeedSort, FeedResponse, Post, PostType } from '@/types/index.js'
 
 const SORT_TABS: { value: FeedSort; label: string }[] = [
-  { value: 'latest', label: 'Latest' },
-  { value: 'trending', label: 'Trending' },
+  { value: 'latest',    label: 'Latest' },
+  { value: 'trending',  label: 'Trending' },
   { value: 'following', label: 'Following' },
 ]
 
 const TYPE_FILTERS: { value: PostType | undefined; label: string }[] = [
-  { value: undefined, label: 'All' },
-  { value: 'DISCUSSION', label: 'Discussions' },
-  { value: 'QUESTION', label: 'Questions' },
+  { value: undefined,      label: 'All' },
+  { value: 'DISCUSSION',   label: 'Discussions' },
+  { value: 'QUESTION',     label: 'Questions' },
   { value: 'ANNOUNCEMENT', label: 'Announcements' },
-  { value: 'RESOURCE', label: 'Resources' },
+  { value: 'RESOURCE',     label: 'Resources' },
 ]
 
 const PostCardSkeleton = () => (
@@ -44,6 +46,7 @@ export const FeedPage = () => {
   const [sort, setSort] = useState<FeedSort>('latest')
   const [typeFilter, setTypeFilter] = useState<PostType | undefined>(undefined)
   const loadMoreRef = useRef<HTMLDivElement>(null)
+  const queryClient = useQueryClient()
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } = useFeed(
     sort,
@@ -52,7 +55,64 @@ export const FeedPage = () => {
 
   const posts = data?.pages.flatMap((page) => page.items) ?? []
 
-  // Infinite scroll via IntersectionObserver
+  // ─── Realtime: new post ───────────────────────────────────────────────────
+  // Prepend to the 'latest' feed only — trending is score-based, following
+  // requires a followship check the client doesn't have. Invalidate others on
+  // next focus via TanStack Query's default refetchOnWindowFocus behaviour.
+  useEffect(() => {
+    const handler = (payload: { post: Post }) => {
+      if (sort !== 'latest') return // only patch the currently visible feed variant
+      queryClient.setQueryData<{ pages: FeedResponse[]; pageParams: unknown[] }>(
+        ['feed', 'latest', typeFilter],
+        (old) => {
+          if (!old) return old
+          const firstPage = old.pages[0]
+          if (!firstPage) return old
+          // Avoid duplicates (e.g. own post already added optimistically by useCreatePost)
+          if (firstPage.items.some((p) => p.id === payload.post.id)) return old
+          return {
+            ...old,
+            pages: [
+              {
+                ...firstPage,
+                items: [payload.post, ...firstPage.items],
+              },
+              ...old.pages.slice(1),
+            ],
+          }
+        },
+      )
+    }
+    socket.on(SocketEvent.FEED_NEW_POST, handler)
+    return () => { socket.off(SocketEvent.FEED_NEW_POST, handler) }
+  }, [sort, typeFilter, queryClient])
+
+  // ─── Realtime: reaction counts on visible posts ───────────────────────────
+  useEffect(() => {
+    const handler = (payload: { postId: string; counts: Record<string, number> }) => {
+      queryClient.setQueriesData<{ pages: FeedResponse[]; pageParams: unknown[] }>(
+        { queryKey: ['feed'] },
+        (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              items: page.items.map((post) =>
+                post.id === payload.postId
+                  ? { ...post, _count: { ...post._count, reactions: Object.values(payload.counts).reduce((a, b) => a + b, 0) } }
+                  : post,
+              ),
+            })),
+          }
+        },
+      )
+    }
+    socket.on(SocketEvent.POST_REACTION_UPDATE, handler)
+    return () => { socket.off(SocketEvent.POST_REACTION_UPDATE, handler) }
+  }, [queryClient])
+
+  // ─── Infinite scroll ──────────────────────────────────────────────────────
   useEffect(() => {
     const el = loadMoreRef.current
     if (!el) return

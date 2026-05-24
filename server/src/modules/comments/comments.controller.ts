@@ -14,6 +14,11 @@ import {
   commentParamSchema,
   postCommentParamSchema,
 } from './comments.schemas.js'
+import { emitNewComment } from '../../lib/socket/socket.gateway.js'
+import {
+  createCommentNotification,
+  createReplyNotification,
+} from '../notifications/notifications.service.js'
 import type { Role } from '@prisma/client'
 
 const handleCommentError = (err: unknown, reply: FastifyReply) => {
@@ -43,6 +48,17 @@ export const createCommentHandler = async (request: FastifyRequest, reply: Fasti
   const body = createCommentSchema.parse(request.body)
   try {
     const comment = await addComment(request.user.sub, postId, body)
+
+    // Emit to anyone viewing this post in realtime
+    emitNewComment({ postId, comment })
+
+    // Notification (fire-and-forget — never block the response)
+    if (body.parentId) {
+      void createReplyNotification(request.user.sub, body.parentId, comment.id)
+    } else {
+      void createCommentNotification(request.user.sub, postId, comment.id)
+    }
+
     return sendSuccess(reply, comment, 201)
   } catch (err) { return handleCommentError(err, reply) }
 }

@@ -2,6 +2,7 @@ import 'dotenv/config'
 import { env } from './config/env.js'
 import { createApp } from './app.js'
 import { prisma } from './config/prisma.js'
+import { createSocketServer } from './config/socket.js'
 
 const start = async () => {
   const app = await createApp()
@@ -22,6 +23,9 @@ const start = async () => {
     app.log.error(err)
     process.exit(1)
   }
+
+  // Attach Socket.IO after listen() so app.server is bound to the port
+  createSocketServer(app)
 
   // Graceful shutdown
   const shutdown = async (signal: string) => {
