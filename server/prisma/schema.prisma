@@ -3,6 +3,7 @@
 // Phase 3: Follow (social graph)
 // Phase 4: Post, Comment, PostReaction, CommentReaction, Tag, PostTag, Media
 // Phase 5: Notification (realtime notification system)
+// Phase 6: Conversation, ConversationParticipant, Message (realtime messaging)
 
 generator client {
   provider = "prisma-client-js"
@@ -86,6 +87,10 @@ model User {
   // Notifications
   notificationsReceived Notification[] @relation("NotificationTarget")
   notificationsActed    Notification[] @relation("NotificationActor")
+
+  // Messaging
+  conversationParticipants ConversationParticipant[]
+  sentMessages             Message[]
 
   @@index([email])
   @@index([role])
@@ -265,4 +270,55 @@ model Notification {
   @@index([targetUserId, createdAt(sort: Desc)])
   @@index([readAt])
   @@index([type])
+}
+
+// ─── Conversation ──────────────────────────────────────────────────────────
+
+model Conversation {
+  id           String                   @id @default(cuid())
+  /// false = direct message; true = group chat
+  isGroup      Boolean                  @default(false)
+  /// Group name (null for DMs)
+  name         String?                  @db.VarChar(100)
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([updatedAt(sort: Desc)])
+}
+
+// ─── ConversationParticipant ───────────────────────────────────────────────
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt       DateTime     @default(now())
+  /// Cursor for unread count: messages after this timestamp are unread
+  lastReadAt     DateTime?
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@index([conversationId])
+}
+
+// ─── Message ───────────────────────────────────────────────────────────────
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content        String       @db.Text
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  /// Soft delete — content replaced with null in API responses
+  deletedAt      DateTime?
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@index([senderId])
 }

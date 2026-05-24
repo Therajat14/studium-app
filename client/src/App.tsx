@@ -9,6 +9,7 @@ import Dashboard from '@/pages/Dashboard.js'
 import Home from '@/pages/Home.js'
 import UnderDevelopment from '@/pages/UnderDevelopment.js'
 import { PostDetail } from '@/features/posts/PostDetail.js'
+import { ChatPage } from '@/features/chat/ChatPage.js'
 import { queryClient } from '@/lib/queryClient.js'
 
 function App() {
@@ -35,6 +36,24 @@ function App() {
                 element={
                   <PrivateRoute>
                     <PostDetail />
+                  </PrivateRoute>
+                }
+              />
+
+              <Route
+                path="/messages"
+                element={
+                  <PrivateRoute>
+                    <ChatPage />
+                  </PrivateRoute>
+                }
+              />
+
+              <Route
+                path="/messages/:conversationId"
+                element={
+                  <PrivateRoute>
+                    <ChatPage />
                   </PrivateRoute>
                 }
               />

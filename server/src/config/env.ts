@@ -14,6 +14,9 @@ const envSchema = z.object({
 
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
 
+  // Redis — optional; falls back to in-memory presence when absent
+  REDIS_URL: z.string().default('redis://localhost:6379'),
+
   // Cloudinary — optional; upload endpoints return 503 when absent
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),

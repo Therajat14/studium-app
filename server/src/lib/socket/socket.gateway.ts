@@ -13,6 +13,10 @@ import type {
   PostReactionUpdatePayload,
   PresencePayload,
   TypingPayload,
+  ChatMessageNewPayload,
+  ChatMessageDeletedPayload,
+  ChatReadReceiptPayload,
+  ChatTypingPayload,
 } from './socket.events.js'
 
 // ─── User room ─────────────────────────────────────────────────────────────
@@ -97,4 +101,44 @@ export const relayTypingStop = (
     ?.to(`post:${payload.postId}`)
     .except(socket.id)
     .emit(SocketEvent.TYPING_STOP, payload)
+}
+
+// ─── Chat / Conversation room ──────────────────────────────────────────────
+
+export const emitChatMessageNew = (payload: ChatMessageNewPayload): void => {
+  getIo()
+    ?.to(`conversation:${payload.conversationId}`)
+    .emit(SocketEvent.CHAT_MESSAGE_NEW, payload)
+}
+
+export const emitChatMessageDeleted = (payload: ChatMessageDeletedPayload): void => {
+  getIo()
+    ?.to(`conversation:${payload.conversationId}`)
+    .emit(SocketEvent.CHAT_MESSAGE_DELETED, payload)
+}
+
+export const emitChatReadReceipt = (payload: ChatReadReceiptPayload): void => {
+  getIo()
+    ?.to(`conversation:${payload.conversationId}`)
+    .emit(SocketEvent.CHAT_READ_RECEIPT, payload)
+}
+
+export const relayChatTypingStart = (
+  socket: { id: string },
+  payload: ChatTypingPayload,
+): void => {
+  getIo()
+    ?.to(`conversation:${payload.conversationId}`)
+    .except(socket.id)
+    .emit(SocketEvent.CHAT_TYPING_START, payload)
+}
+
+export const relayChatTypingStop = (
+  socket: { id: string },
+  payload: ChatTypingPayload,
+): void => {
+  getIo()
+    ?.to(`conversation:${payload.conversationId}`)
+    .except(socket.id)
+    .emit(SocketEvent.CHAT_TYPING_STOP, payload)
 }

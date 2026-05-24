@@ -27,6 +27,17 @@ export const SocketEvent = {
   // Client → Server: room management
   ROOM_JOIN_POST:  'room:join_post',
   ROOM_LEAVE_POST: 'room:leave_post',
+
+  // Server → Client: chat
+  CHAT_MESSAGE_NEW:     'chat:message_new',
+  CHAT_MESSAGE_DELETED: 'chat:message_deleted',
+  CHAT_READ_RECEIPT:    'chat:read_receipt',
+  CHAT_TYPING_START:    'chat:typing_start',
+  CHAT_TYPING_STOP:     'chat:typing_stop',
+
+  // Client → Server: chat room management
+  ROOM_JOIN_CONVERSATION:  'room:join_conversation',
+  ROOM_LEAVE_CONVERSATION: 'room:leave_conversation',
 } as const
 
 export type SocketEventName = (typeof SocketEvent)[keyof typeof SocketEvent]
@@ -92,3 +103,33 @@ export interface PostReactionUpdatePayload {
 export interface PresencePayload    { userId: string }
 export interface TypingPayload      { postId: string; userId: string }
 export interface NotificationCountPayload { unread: number }
+
+export interface ChatMessageNewPayload {
+  conversationId: string
+  message: {
+    id:        string
+    content:   string
+    createdAt: Date
+    sender: {
+      id:       string
+      name:     string
+      avatarUrl: string | null
+    }
+  }
+}
+
+export interface ChatMessageDeletedPayload {
+  conversationId: string
+  messageId:      string
+}
+
+export interface ChatReadReceiptPayload {
+  conversationId: string
+  userId:         string
+  lastReadAt:     Date
+}
+
+export interface ChatTypingPayload {
+  conversationId: string
+  userId:         string
+}

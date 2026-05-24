@@ -111,5 +111,5 @@ export const getPresenceHandler = async (request: FastifyRequest, reply: Fastify
   const query = request.query as { userIds?: string | string[] }
   const raw   = query.userIds
   const ids   = Array.isArray(raw) ? raw : raw ? [raw] : []
-  return sendSuccess(reply, batchIsOnline(ids.slice(0, 100)))
+  return sendSuccess(reply, await batchIsOnline(ids.slice(0, 100)))
 }

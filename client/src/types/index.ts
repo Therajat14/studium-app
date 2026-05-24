@@ -138,6 +138,46 @@ export interface NotificationsResponse {
   unread:     number
 }
 
+// ─── Messaging ─────────────────────────────────────────────────────────────
+
+export interface MessageSender {
+  id:       string
+  name:     string
+  avatarUrl: string | null
+}
+
+export interface Message {
+  id:        string
+  content:   string
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+  sender:    MessageSender
+}
+
+export interface ConversationParticipant {
+  id:         string
+  userId:     string
+  joinedAt:   string
+  lastReadAt: string | null
+  user:       MessageSender & { role: Role }
+}
+
+export interface Conversation {
+  id:           string
+  isGroup:      boolean
+  name:         string | null
+  createdAt:    string
+  updatedAt:    string
+  participants: ConversationParticipant[]
+  messages:     Message[] // last message only
+}
+
+export interface MessagesResponse {
+  items:      Message[]
+  nextCursor: string | undefined
+}
+
 // ─── Pagination ────────────────────────────────────────────────────────────
 
 export interface PaginatedData<T> {

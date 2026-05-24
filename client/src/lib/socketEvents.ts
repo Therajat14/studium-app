@@ -13,4 +13,13 @@ export const SocketEvent = {
   TYPING_STOP:         'typing:stop',
   ROOM_JOIN_POST:      'room:join_post',
   ROOM_LEAVE_POST:     'room:leave_post',
+
+  // Chat
+  CHAT_MESSAGE_NEW:        'chat:message_new',
+  CHAT_MESSAGE_DELETED:    'chat:message_deleted',
+  CHAT_READ_RECEIPT:       'chat:read_receipt',
+  CHAT_TYPING_START:       'chat:typing_start',
+  CHAT_TYPING_STOP:        'chat:typing_stop',
+  ROOM_JOIN_CONVERSATION:  'room:join_conversation',
+  ROOM_LEAVE_CONVERSATION: 'room:leave_conversation',
 } as const
