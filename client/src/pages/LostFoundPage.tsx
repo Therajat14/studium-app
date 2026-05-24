@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Search, Plus, MapPin, Clock, CheckCircle, Trash2, X,
   Package, FileText, Shirt, Watch, BookOpen, Key, ShoppingBag, HelpCircle,
-  Smartphone, MessageCircle,
+  Smartphone, MessageCircle, Upload, ImageIcon,
 } from 'lucide-react'
 import { lostFoundApi } from '../api/lostfound.js'
+import { uploadApi } from '../api/upload.js'
 import { useAuth } from '../hooks/useAuth.js'
 import type { LostFoundItem, LostFoundType, LostFoundCategory } from '../types/index.js'
 import type { CreateItemPayload } from '../api/lostfound.js'
@@ -312,14 +313,43 @@ function ReportModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
   const [form, setForm] = useState<CreateItemPayload>({
     type: 'LOST', category: 'OTHER', title: '', description: '',
   })
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateItemPayload) => lostFoundApi.create(payload),
     onSuccess: onCreated,
   })
 
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Local preview immediately
+    setImagePreview(URL.createObjectURL(file))
+    setUploadError(null)
+    setUploading(true)
+    try {
+      const media = await uploadApi.upload(file)
+      setForm((f) => ({ ...f, imageUrl: media.url }))
+    } catch {
+      setUploadError('Image upload failed. Please try again.')
+      setImagePreview(null)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const removeImage = () => {
+    setImagePreview(null)
+    setForm((f) => ({ ...f, imageUrl: undefined }))
+    setUploadError(null)
+  }
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (uploading) return
     createMutation.mutate(form)
   }
 
@@ -413,14 +443,56 @@ function ReportModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
             />
           </div>
 
+          {/* Image upload */}
           <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-1.5">Image URL (optional)</label>
-            <input
-              type="url" value={form.imageUrl ?? ''}
-              onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="https://..."
-            />
+            <label className="block text-sm font-medium text-muted-foreground mb-1.5">
+              Photo (optional)
+            </label>
+
+            {imagePreview ? (
+              <div className="relative rounded-lg overflow-hidden border">
+                <img src={imagePreview} alt="Preview" className="w-full h-48 object-cover" />
+                {uploading && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <div className="w-7 h-7 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+                {!uploading && (
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="absolute top-2 right-2 bg-black/60 text-white p-1.5 rounded-full hover:bg-black/80 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <div className="p-2 bg-muted rounded-full">
+                    <ImageIcon className="h-6 w-6" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-medium">Click to upload a photo</p>
+                    <p className="text-xs">JPG, PNG, WEBP up to 10 MB</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
+                    <Upload className="h-3.5 w-3.5" /> Browse files
+                  </div>
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
+              </label>
+            )}
+
+            {uploadError && (
+              <p className="text-xs text-destructive mt-1">{uploadError}</p>
+            )}
           </div>
 
           {createMutation.isError && (
@@ -431,10 +503,10 @@ function ReportModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
             <button type="button" onClick={onClose} className="px-4 py-2 text-muted-foreground hover:text-foreground">Cancel</button>
             <button
               type="submit"
-              disabled={createMutation.isPending}
+              disabled={createMutation.isPending || uploading}
               className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
-              {createMutation.isPending ? 'Reporting...' : 'Report'}
+              {uploading ? 'Uploading…' : createMutation.isPending ? 'Reporting…' : 'Report'}
             </button>
           </div>
         </form>
