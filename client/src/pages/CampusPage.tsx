@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Star, Search, Filter, Plus, ThumbsUp, ThumbsDown, X,
-  Coffee, Book, Home, Utensils, Car, MapPin,
+  Star, Search, Plus, ThumbsUp, ThumbsDown, X,
+  Book, Home, Utensils, Car, MapPin,
 } from 'lucide-react'
 import { campusApi } from '../api/campus.js'
 import type { CampusReview, ReviewCategory } from '../types/index.js'

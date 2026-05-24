@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { TrendingUp, TrendingDown, MessageCircle, Bookmark, Share2, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { useTogglePostReaction } from '@/hooks/useReactions.js'
 import { useDeletePost } from '@/hooks/usePosts.js'
 import { useAuth } from '@/hooks/useAuth.js'
@@ -41,7 +41,6 @@ interface PostCardProps {
 
 export const PostCard = ({ post }: PostCardProps) => {
   const { user } = useAuth()
-  const qc = useQueryClient()
   const { mutate: toggleReaction } = useTogglePostReaction(post.id)
   const { mutate: deletePost, isPending: isDeleting } = useDeletePost()
 
@@ -135,7 +134,7 @@ export const PostCard = ({ post }: PostCardProps) => {
 
             {/* Downvote */}
             <button
-              onClick={() => toggleReaction('DOWNVOTE')}
+              onClick={() => toggleReaction('UPVOTE')}
               className="p-1.5 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             >
               <TrendingDown className="h-4 w-4" />

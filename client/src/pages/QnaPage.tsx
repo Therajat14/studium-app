@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   HelpCircle, MessageCircle, TrendingUp, TrendingDown, Award,
-  Calendar, Tag, Search, Filter, Plus, CheckCircle, Users, Clock,
-  Bookmark, ChevronDown, ChevronUp, X,
+  Clock, Tag, Search, Plus, CheckCircle,
+  ChevronDown, ChevronUp, X,
 } from 'lucide-react'
 import { qnaApi } from '../api/qna.js'
 import { useAuth } from '../hooks/useAuth.js'

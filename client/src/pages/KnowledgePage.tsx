@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Upload, Download, Star, FileText, Filter, Search, Calendar,
-  Tag, Eye, Plus, Bookmark, Share2, Edit3, Users, Clock,
-  BookOpen, Award, File, Image, Video, Archive, X,
+  Download, Star, FileText, Filter, Search, Calendar,
+  Tag, Eye, Plus, Bookmark, Share2, Edit3, File, Image, Video, Archive, X,
 } from 'lucide-react'
 import { knowledgeApi } from '../api/knowledge.js'
 import type { Resource, ResourceType } from '../types/index.js'

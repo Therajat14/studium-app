@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Briefcase, Calendar, MapPin, ExternalLink, Users, Clock,
-  Filter, Search, Plus, Building, GraduationCap, Code, Trophy,
+  Briefcase, Calendar, MapPin, ExternalLink, Clock,
+  Search, Plus, Building, GraduationCap, Code, Trophy,
   X, Trash2,
 } from 'lucide-react'
 import { opportunitiesApi } from '../api/opportunities.js'
@@ -304,6 +304,13 @@ function PostModal({ onClose, onCreated }: { onClose: () => void; onCreated: () 
             <input type="text" value={reqInput} onChange={(e) => setReqInput(e.target.value)}
               className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Python, React, SQL"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-1.5">Tags (comma-separated)</label>
+            <input type="text" value={tagsInput} onChange={(e) => setTagsInput(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="internship, remote, web-dev"
             />
           </div>
           {createMutation.isError && (

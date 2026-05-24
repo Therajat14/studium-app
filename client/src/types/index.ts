@@ -280,6 +280,7 @@ export interface QnaQuestion {
   views: number
   isBookmarked: boolean
   isClosed: boolean
+  hasAcceptedAnswer: boolean
   author: QnaAuthor
   answers: QnaAnswer[]
   _count: { answers: number }

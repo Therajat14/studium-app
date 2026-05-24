@@ -10,6 +10,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
     "format": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
@@ -42,11 +45,13 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.9.0",
     "@types/pg": "^8.11.0",
+    "@vitest/coverage-v8": "^4.1.7",
     "eslint": "^9.17.0",
     "prettier": "^3.4.2",
     "prisma": "^7.8.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "typescript-eslint": "^8.18.0"
+    "typescript-eslint": "^8.18.0",
+    "vitest": "^4.1.7"
   }
 }
