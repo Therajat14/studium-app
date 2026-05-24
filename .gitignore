@@ -44,3 +44,9 @@ Thumbs.db
 
 # Test coverage
 coverage/
+
+# Claude Code memory / session data
+.claude/
+
+# Prototype reference (not production code)
+prototype-view/
