@@ -1,26 +1,28 @@
 import { useAuth } from '@/hooks/useAuth.js'
 import LogoutButton from '@/components/auth/LogoutButton.js'
+import { Avatar } from '@/components/ui/avatar.js'
+import { FeedPage } from '@/features/feed/FeedPage.js'
 
 const Dashboard = () => {
   const { user } = useAuth()
 
   return (
-    <div className="bg-background min-h-screen p-8">
-      <div className="mx-auto max-w-4xl">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Welcome back, {user?.name} 👋</h1>
-            <p className="text-muted-foreground mt-1 text-sm">{user?.email}</p>
+    <div className="bg-background min-h-screen">
+      {/* Top nav */}
+      <header className="border-border sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
+          <span className="font-bold tracking-tight">Studium</span>
+          <div className="flex items-center gap-2">
+            <Avatar src={user?.avatarUrl} fallback={user?.name ?? ''} size="sm" />
+            <LogoutButton />
           </div>
-          <LogoutButton />
         </div>
+      </header>
 
-        <div className="border-border rounded-xl border p-6">
-          <p className="text-muted-foreground text-center text-sm">
-            Dashboard features are coming in Phase 4. The backend foundation is ready.
-          </p>
-        </div>
-      </div>
+      {/* Feed */}
+      <main className="mx-auto max-w-2xl px-4 py-6">
+        <FeedPage />
+      </main>
     </div>
   )
 }

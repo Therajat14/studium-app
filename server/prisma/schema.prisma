@@ -1,7 +1,7 @@
 // Studium — PostgreSQL schema
 // Phase 2: User + RefreshToken (auth foundation)
 // Phase 3: Follow (social graph)
-// Phase 4 will add: Post, Comment, Vote, Resource, Group, Membership, Notification, Tag
+// Phase 4: Post, Comment, PostReaction, CommentReaction, Tag, PostTag, Media
 
 generator client {
   provider = "prisma-client-js"
@@ -16,8 +16,27 @@ datasource db {
 enum Role {
   STUDENT
   ALUMNI
-  MENTOR    // Assigned role for mentors; higher trust than STUDENT/ALUMNI
+  MENTOR
   ADMIN
+}
+
+enum PostType {
+  DISCUSSION
+  QUESTION
+  ANNOUNCEMENT
+  RESOURCE
+}
+
+enum ReactionType {
+  LIKE
+  UPVOTE
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  PDF
+  DOCUMENT
 }
 
 // ─── User ──────────────────────────────────────────────────────────────────
@@ -41,14 +60,19 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
+  // Auth
   refreshTokens RefreshToken[]
 
-  // Social graph — unidirectional follows (Twitter-style)
-  // followers: Follow records where followingId = this user (people who follow me)
+  // Social graph
   followers Follow[] @relation("UserFollowers")
-  // following: Follow records where followerId = this user (people I follow)
   following Follow[] @relation("UserFollowing")
+
+  // Content
+  posts           Post[]
+  comments        Comment[]
+  postReactions   PostReaction[]
+  commentReactions CommentReaction[]
+  uploads         Media[]
 
   @@index([email])
   @@index([role])
@@ -74,16 +98,135 @@ model RefreshToken {
 
 model Follow {
   id          String   @id @default(cuid())
-  /// The user doing the following
   followerId  String
   follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
-  /// The user being followed
   followingId String
   following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
 
-  /// One follow relationship per ordered pair — enforced at DB level
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+}
+
+// ─── Post ──────────────────────────────────────────────────────────────────
+
+model Post {
+  id        String   @id @default(cuid())
+  title     String?  @db.VarChar(200)
+  content   String   @db.Text
+  type      PostType @default(DISCUSSION)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  tags      PostTag[]
+  media     Media[]
+  comments  Comment[]
+  reactions PostReaction[]
+  viewCount Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  /// Soft delete — content replaced with null in API responses
+  deletedAt DateTime?
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([type])
+  @@index([deletedAt])
+}
+
+// ─── Comment (adjacency list — max 1 reply level enforced in service) ──────
+
+model Comment {
+  id        String    @id @default(cuid())
+  content   String    @db.Text
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  /// null = top-level comment; set = direct reply to a top-level comment
+  parentId  String?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies   Comment[] @relation("CommentReplies")
+  reactions CommentReaction[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([postId])
+  @@index([parentId])
+  @@index([authorId])
+}
+
+// ─── PostReaction ──────────────────────────────────────────────────────────
+
+model PostReaction {
+  id        String       @id @default(cuid())
+  type      ReactionType @default(LIKE)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+
+  /// One reaction type per user per post — toggle by delete+create
+  @@unique([userId, postId, type])
+  @@index([postId])
+  @@index([userId])
+}
+
+// ─── CommentReaction ───────────────────────────────────────────────────────
+
+model CommentReaction {
+  id        String       @id @default(cuid())
+  type      ReactionType @default(LIKE)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commentId String
+  comment   Comment      @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+
+  @@unique([userId, commentId, type])
+  @@index([commentId])
+  @@index([userId])
+}
+
+// ─── Tag ───────────────────────────────────────────────────────────────────
+
+model Tag {
+  id    String    @id @default(cuid())
+  name  String    @unique @db.VarChar(50)
+  slug  String    @unique @db.VarChar(50)
+  posts PostTag[]
+}
+
+// ─── PostTag (junction) ────────────────────────────────────────────────────
+
+model PostTag {
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tagId  String
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+}
+
+// ─── Media ─────────────────────────────────────────────────────────────────
+
+model Media {
+  id           String    @id @default(cuid())
+  url          String
+  /// Cloudinary public_id — used for deletion
+  publicId     String
+  resourceType MediaType
+  bytes        Int
+  originalName String    @db.VarChar(255)
+  /// null until attached to a post — draft-safe upload flow
+  postId       String?
+  post         Post?     @relation(fields: [postId], references: [id], onDelete: SetNull)
+  uploadedById String
+  uploadedBy   User      @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+
+  @@index([postId])
+  @@index([uploadedById])
 }

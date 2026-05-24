@@ -31,6 +31,82 @@ export interface UserProfile extends User {
   }
 }
 
+// ─── Post ──────────────────────────────────────────────────────────────────
+
+export type PostType = 'DISCUSSION' | 'QUESTION' | 'ANNOUNCEMENT' | 'RESOURCE'
+export type ReactionType = 'LIKE' | 'UPVOTE'
+export type MediaType = 'IMAGE' | 'VIDEO' | 'PDF' | 'DOCUMENT'
+
+export interface PostAuthor {
+  id: string
+  name: string
+  avatarUrl: string | null
+  role: Role
+  college: string | null
+}
+
+export interface Tag {
+  id: string
+  name: string
+  slug: string
+}
+
+export interface Media {
+  id: string
+  url: string
+  resourceType: MediaType
+  bytes: number
+  originalName: string
+}
+
+export interface Post {
+  id: string
+  title: string | null
+  content: string
+  type: PostType
+  viewCount: number
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+  author: PostAuthor
+  tags: Array<{ tag: Tag }>
+  media: Media[]
+  _count: { reactions: number; comments: number }
+}
+
+// ─── Comment ───────────────────────────────────────────────────────────────
+
+export interface Comment {
+  id: string
+  content: string
+  parentId: string | null
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+  author: PostAuthor
+  _count: { reactions: number; replies: number }
+  replies?: Comment[]
+}
+
+// ─── Feed ──────────────────────────────────────────────────────────────────
+
+export type FeedSort = 'latest' | 'trending' | 'following'
+
+export interface FeedResponse {
+  items: Post[]
+  nextCursor: string | null
+  hasMore: boolean
+  sort: string
+}
+
+// ─── Reaction ──────────────────────────────────────────────────────────────
+
+export interface ReactionResult {
+  reacted: boolean
+  type: ReactionType
+  counts: Record<ReactionType, number>
+}
+
 // ─── Pagination ────────────────────────────────────────────────────────────
 
 export interface PaginatedData<T> {

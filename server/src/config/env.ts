@@ -13,6 +13,15 @@ const envSchema = z.object({
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(14).default(12),
 
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+
+  // Cloudinary — optional; upload endpoints return 503 when absent
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
+  CLOUDINARY_UPLOAD_FOLDER: z.string().default('studium/uploads'),
+  UPLOAD_MAX_IMAGE_BYTES: z.coerce.number().int().positive().default(5 * 1024 * 1024),   // 5 MB
+  UPLOAD_MAX_PDF_BYTES: z.coerce.number().int().positive().default(20 * 1024 * 1024),    // 20 MB
+  UPLOAD_MAX_VIDEO_BYTES: z.coerce.number().int().positive().default(100 * 1024 * 1024), // 100 MB
 })
 
 const parsed = envSchema.safeParse(process.env)

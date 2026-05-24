@@ -8,6 +8,7 @@ import LoginPage from '@/pages/Login.js'
 import Dashboard from '@/pages/Dashboard.js'
 import Home from '@/pages/Home.js'
 import UnderDevelopment from '@/pages/UnderDevelopment.js'
+import { PostDetail } from '@/features/posts/PostDetail.js'
 import { queryClient } from '@/lib/queryClient.js'
 
 function App() {
@@ -25,6 +26,15 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Dashboard />
+                  </PrivateRoute>
+                }
+              />
+
+              <Route
+                path="/post/:id"
+                element={
+                  <PrivateRoute>
+                    <PostDetail />
                   </PrivateRoute>
                 }
               />
