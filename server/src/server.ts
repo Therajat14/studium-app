@@ -28,12 +28,15 @@ const start = async () => {
     process.exit(1)
   }
 
-  // Attach Socket.IO after listen() so app.server is bound to the port
-  await createSocketServer(app)
-
-  // Start background workers
-  startNotificationsWorker()
-  startCleanupWorker()
+  // Attach Socket.IO + workers — Redis-dependent, degrade gracefully if unavailable
+  try {
+    await createSocketServer(app)
+    startNotificationsWorker()
+    startCleanupWorker()
+  } catch (err) {
+    app.log.warn('Redis unavailable — realtime features and background workers are disabled')
+    app.log.warn(err)
+  }
 
   // Graceful shutdown
   const shutdown = async (signal: string) => {

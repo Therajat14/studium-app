@@ -5,16 +5,24 @@ import type { User } from '../types/index.js'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
+export interface RegisterPayload {
+  name: string
+  email: string
+  password: string
+  rollNumber?: string
+  college?: string
+  branch?: string
+  year?: number
+  bio?: string
+  skills?: string[]
+  links?: { github?: string; linkedin?: string; portfolio?: string }
+}
+
 interface AuthContextValue {
   user: User | null
   loading: boolean // true while restoring session on page load
   login: (email: string, password: string) => Promise<void>
-  register: (payload: {
-    name: string
-    email: string
-    password: string
-    rollNumber?: string
-  }) => Promise<void>
+  register: (payload: RegisterPayload) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -56,14 +64,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(user)
   }, [])
 
-  const register = useCallback(
-    async (payload: { name: string; email: string; password: string; rollNumber?: string }) => {
-      const { accessToken, user } = await authApi.register(payload)
-      injectToken(accessToken)
-      setUser(user)
-    },
-    [],
-  )
+  const register = useCallback(async (payload: RegisterPayload) => {
+    const { accessToken, user } = await authApi.register(payload)
+    injectToken(accessToken)
+    setUser(user)
+  }, [])
 
   const logout = useCallback(async () => {
     try {

@@ -1,10 +1,3 @@
-// Studium — PostgreSQL schema
-// Phase 2: User + RefreshToken (auth foundation)
-// Phase 3: Follow (social graph)
-// Phase 4: Post, Comment, PostReaction, CommentReaction, Tag, PostTag, Media
-// Phase 5: Notification (realtime notification system)
-// Phase 6: Conversation, ConversationParticipant, Message (realtime messaging)
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -27,11 +20,13 @@ enum PostType {
   QUESTION
   ANNOUNCEMENT
   RESOURCE
+  POLL
 }
 
 enum ReactionType {
   LIKE
   UPVOTE
+  DOWNVOTE
 }
 
 enum MediaType {
@@ -49,48 +44,86 @@ enum NotificationType {
   COMMENT_REACTION
 }
 
+enum ResourceType {
+  PDF
+  DOC
+  SPREADSHEET
+  IMAGE
+  VIDEO
+  LINK
+  COLLABORATIVE
+}
+
+enum QuestionDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum OpportunityType {
+  JOB
+  INTERNSHIP
+  HACKATHON
+  EVENT
+  SCHOLARSHIP
+  PROJECT
+}
+
+enum ReviewCategory {
+  FACULTY
+  COURSE
+  FACILITY
+  FOOD
+  TRANSPORT
+  OTHER
+}
+
 // ─── User ──────────────────────────────────────────────────────────────────
 
 model User {
-  id         String  @id @default(cuid())
-  email      String  @unique
-  name       String  @db.VarChar(50)
-  /// Stored as bcrypt hash — never returned in API responses
+  id         String   @id @default(cuid())
+  email      String   @unique
+  name       String   @db.VarChar(50)
   password   String
-  rollNumber String? @unique
+  rollNumber String?  @unique
   college    String?
   branch     String?
   year       Int?
-  bio        String? @db.Text
+  bio        String?  @db.Text
   avatarUrl  String?
-  role       Role    @default(STUDENT)
+  role       Role     @default(STUDENT)
   /// Social links: { github?, linkedin?, portfolio?, twitter? }
   links      Json?
+  skills     String[]
+  karma      Int      @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Auth
-  refreshTokens RefreshToken[]
-
-  // Social graph
-  followers Follow[] @relation("UserFollowers")
-  following Follow[] @relation("UserFollowing")
-
-  // Content
-  posts           Post[]
-  comments        Comment[]
-  postReactions   PostReaction[]
-  commentReactions CommentReaction[]
-  uploads         Media[]
-
-  // Notifications
-  notificationsReceived Notification[] @relation("NotificationTarget")
-  notificationsActed    Notification[] @relation("NotificationActor")
-
-  // Messaging
+  refreshTokens            RefreshToken[]
+  followers                Follow[]                  @relation("UserFollowers")
+  following                Follow[]                  @relation("UserFollowing")
+  posts                    Post[]
+  comments                 Comment[]
+  postReactions            PostReaction[]
+  commentReactions         CommentReaction[]
+  uploads                  Media[]
+  notificationsReceived    Notification[]            @relation("NotificationTarget")
+  notificationsActed       Notification[]            @relation("NotificationActor")
   conversationParticipants ConversationParticipant[]
   sentMessages             Message[]
+  bookmarks                PostBookmark[]
+  pollVotes                PollVote[]
+  resources                Resource[]
+  resourceBookmarks        ResourceBookmark[]
+  resourceRatings          ResourceRating[]
+  qnaQuestions             QnaQuestion[]
+  qnaAnswers               QnaAnswer[]
+  qnaVotes                 QnaVote[]
+  qnaAnswerVotes           QnaAnswerVote[]
+  opportunities            Opportunity[]
+  campusReviews            CampusReview[]
+  reviewVotes              ReviewVote[]
 
   @@index([email])
   @@index([role])
@@ -101,7 +134,6 @@ model User {
 
 model RefreshToken {
   id        String   @id @default(cuid())
-  /// Opaque random token (not a JWT) — enables server-side revocation
   token     String   @unique
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -140,10 +172,11 @@ model Post {
   media     Media[]
   comments  Comment[]
   reactions PostReaction[]
+  bookmarks PostBookmark[]
+  poll      Poll?
   viewCount Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  /// Soft delete — content replaced with null in API responses
   deletedAt DateTime?
 
   @@index([authorId])
@@ -152,7 +185,60 @@ model Post {
   @@index([deletedAt])
 }
 
-// ─── Comment (adjacency list — max 1 reply level enforced in service) ──────
+// ─── PostBookmark ──────────────────────────────────────────────────────────
+
+model PostBookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+  @@index([userId])
+  @@index([postId])
+}
+
+// ─── Poll ──────────────────────────────────────────────────────────────────
+
+model Poll {
+  id        String       @id @default(cuid())
+  postId    String       @unique
+  post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  options   PollOption[]
+  votes     PollVote[]
+  endsAt    DateTime?
+  createdAt DateTime     @default(now())
+}
+
+model PollOption {
+  id     String     @id @default(cuid())
+  pollId String
+  poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  text   String     @db.VarChar(120)
+  order  Int        @default(0)
+  votes  PollVote[]
+
+  @@index([pollId])
+}
+
+model PollVote {
+  id        String     @id @default(cuid())
+  pollId    String
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  optionId  String
+  option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+
+  @@unique([pollId, userId])
+  @@index([pollId])
+  @@index([userId])
+}
+
+// ─── Comment ───────────────────────────────────────────────────────────────
 
 model Comment {
   id        String    @id @default(cuid())
@@ -161,7 +247,6 @@ model Comment {
   author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   postId    String
   post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  /// null = top-level comment; set = direct reply to a top-level comment
   parentId  String?
   parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: SetNull)
   replies   Comment[] @relation("CommentReplies")
@@ -186,7 +271,6 @@ model PostReaction {
   post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
   createdAt DateTime     @default(now())
 
-  /// One reaction type per user per post — toggle by delete+create
   @@unique([userId, postId, type])
   @@index([postId])
   @@index([userId])
@@ -208,7 +292,7 @@ model CommentReaction {
   @@index([userId])
 }
 
-// ─── Tag ───────────────────────────────────────────────────────────────────
+// ─── Tag / PostTag ─────────────────────────────────────────────────────────
 
 model Tag {
   id    String    @id @default(cuid())
@@ -216,8 +300,6 @@ model Tag {
   slug  String    @unique @db.VarChar(50)
   posts PostTag[]
 }
-
-// ─── PostTag (junction) ────────────────────────────────────────────────────
 
 model PostTag {
   postId String
@@ -233,12 +315,10 @@ model PostTag {
 model Media {
   id           String    @id @default(cuid())
   url          String
-  /// Cloudinary public_id — used for deletion
   publicId     String
   resourceType MediaType
   bytes        Int
   originalName String    @db.VarChar(255)
-  /// null until attached to a post — draft-safe upload flow
   postId       String?
   post         Post?     @relation(fields: [postId], references: [id], onDelete: SetNull)
   uploadedById String
@@ -250,16 +330,12 @@ model Media {
 }
 
 // ─── Notification ──────────────────────────────────────────────────────────
-// entityId + entityType cover all notification types without nullable FK columns.
-// COMMENT/POST_REACTION → entityId=postId,     entityType='post'
-// REPLY/COMMENT_REACTION→ entityId=commentId,  entityType='comment'
-// FOLLOW               → entityId=actorId,     entityType='user'
 
 model Notification {
   id           String           @id @default(cuid())
   type         NotificationType
   actorId      String
-  actor        User             @relation("NotificationActor", fields: [actorId],      references: [id], onDelete: Cascade)
+  actor        User             @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
   targetUserId String
   targetUser   User             @relation("NotificationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
   entityId     String
@@ -272,14 +348,13 @@ model Notification {
   @@index([type])
 }
 
-// ─── Conversation ──────────────────────────────────────────────────────────
+// ─── Conversation / Message ────────────────────────────────────────────────
 
 model Conversation {
   id           String                   @id @default(cuid())
-  /// false = direct message; true = group chat
   isGroup      Boolean                  @default(false)
-  /// Group name (null for DMs)
   name         String?                  @db.VarChar(100)
+  avatarUrl    String?
   createdAt    DateTime                 @default(now())
   updatedAt    DateTime                 @updatedAt
   participants ConversationParticipant[]
@@ -288,8 +363,6 @@ model Conversation {
   @@index([updatedAt(sort: Desc)])
 }
 
-// ─── ConversationParticipant ───────────────────────────────────────────────
-
 model ConversationParticipant {
   id             String       @id @default(cuid())
   conversationId String
@@ -297,15 +370,13 @@ model ConversationParticipant {
   userId         String
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   joinedAt       DateTime     @default(now())
-  /// Cursor for unread count: messages after this timestamp are unread
   lastReadAt     DateTime?
+  isAdmin        Boolean      @default(false)
 
   @@unique([conversationId, userId])
   @@index([userId])
   @@index([conversationId])
 }
-
-// ─── Message ───────────────────────────────────────────────────────────────
 
 model Message {
   id             String       @id @default(cuid())
@@ -316,9 +387,187 @@ model Message {
   content        String       @db.Text
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-  /// Soft delete — content replaced with null in API responses
   deletedAt      DateTime?
 
   @@index([conversationId, createdAt(sort: Desc)])
   @@index([senderId])
+}
+
+// ─── Knowledge Hub ─────────────────────────────────────────────────────────
+
+model Resource {
+  id              String           @id @default(cuid())
+  title           String           @db.VarChar(200)
+  description     String?          @db.Text
+  type            ResourceType
+  subject         String?          @db.VarChar(100)
+  course          String?          @db.VarChar(50)
+  fileUrl         String?
+  fileSize        Int?
+  uploadedById    String
+  uploadedBy      User             @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+  downloads       Int              @default(0)
+  isCollaborative Boolean          @default(false)
+  contributors    Int              @default(1)
+  tags            String[]
+  bookmarks       ResourceBookmark[]
+  ratings         ResourceRating[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([uploadedById])
+  @@index([type])
+  @@index([subject])
+  @@index([createdAt])
+}
+
+model ResourceBookmark {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceId String
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, resourceId])
+  @@index([userId])
+}
+
+model ResourceRating {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resourceId String
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  rating     Int
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, resourceId])
+  @@index([resourceId])
+}
+
+// ─── Q&A ───────────────────────────────────────────────────────────────────
+
+model QnaQuestion {
+  id          String             @id @default(cuid())
+  title       String             @db.VarChar(300)
+  content     String             @db.Text
+  authorId    String
+  author      User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  tags        String[]
+  difficulty  QuestionDifficulty @default(INTERMEDIATE)
+  bounty      Int                @default(0)
+  views       Int                @default(0)
+  hasAccepted Boolean            @default(false)
+  answers     QnaAnswer[]
+  votes       QnaVote[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([hasAccepted])
+}
+
+model QnaAnswer {
+  id         String        @id @default(cuid())
+  questionId String
+  question   QnaQuestion   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  content    String        @db.Text
+  authorId   String
+  author     User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  isAccepted Boolean       @default(false)
+  votes      QnaAnswerVote[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([questionId])
+  @@index([authorId])
+}
+
+model QnaVote {
+  id         String      @id @default(cuid())
+  questionId String
+  question   QnaQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  value      Int
+  createdAt  DateTime    @default(now())
+
+  @@unique([questionId, userId])
+  @@index([questionId])
+}
+
+model QnaAnswerVote {
+  id        String    @id @default(cuid())
+  answerId  String
+  answer    QnaAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  value     Int
+  createdAt DateTime  @default(now())
+
+  @@unique([answerId, userId])
+  @@index([answerId])
+}
+
+// ─── Opportunities ─────────────────────────────────────────────────────────
+
+model Opportunity {
+  id           String          @id @default(cuid())
+  title        String          @db.VarChar(200)
+  description  String          @db.Text
+  type         OpportunityType
+  company      String?         @db.VarChar(100)
+  location     String?         @db.VarChar(100)
+  salary       String?         @db.VarChar(50)
+  requirements String[]
+  deadline     DateTime?
+  eventDate    DateTime?
+  url          String?
+  postedById   String
+  postedBy     User            @relation(fields: [postedById], references: [id], onDelete: Cascade)
+  applicants   Int             @default(0)
+  maxAttendees Int?
+  tags         String[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([postedById])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ─── Campus Life ───────────────────────────────────────────────────────────
+
+model CampusReview {
+  id         String         @id @default(cuid())
+  category   ReviewCategory
+  title      String         @db.VarChar(200)
+  content    String         @db.Text
+  rating     Float
+  authorId   String
+  author     User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  helpful    Int            @default(0)
+  notHelpful Int            @default(0)
+  votes      ReviewVote[]
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([authorId])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model ReviewVote {
+  id        String       @id @default(cuid())
+  reviewId  String
+  review    CampusReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  helpful   Boolean
+  createdAt DateTime     @default(now())
+
+  @@unique([reviewId, userId])
+  @@index([reviewId])
 }

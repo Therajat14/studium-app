@@ -2,6 +2,9 @@ import { Queue } from 'bullmq'
 import { createRedisClient } from '../redis.js'
 
 const connection = createRedisClient()
+connection.on('error', (err: Error) => {
+  console.error('[BullMQ] Redis connection error:', err.message)
+})
 
 // ─── Queue definitions ─────────────────────────────────────────────────────
 

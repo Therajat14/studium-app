@@ -42,4 +42,14 @@ export const postsApi = {
     )
     return data.data
   },
+
+  toggleBookmark: async (id: string): Promise<{ bookmarked: boolean }> => {
+    const { data } = await api.post<{ success: true; data: { bookmarked: boolean } }>(`/posts/${id}/bookmark`)
+    return data.data
+  },
+
+  getBookmark: async (id: string): Promise<{ bookmarked: boolean }> => {
+    const { data } = await api.get<{ success: true; data: { bookmarked: boolean } }>(`/posts/${id}/bookmark`)
+    return data.data
+  },
 }

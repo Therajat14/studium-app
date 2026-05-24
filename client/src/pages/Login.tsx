@@ -1,87 +1,83 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate } from 'react-router'
-import { BookOpen, Mail, Lock, User, Hash, Check, AlertCircle } from 'lucide-react'
+import { z } from 'zod'
+import {
+  BookOpen, Mail, Lock, User, Hash, AlertCircle, Eye, EyeOff,
+  School, Calendar, Github, Linkedin, Globe,
+} from 'lucide-react'
+import type { AxiosError } from 'axios'
 import { useAuth } from '@/hooks/useAuth.js'
-import {
-  loginSchema,
-  registerSchema,
-  type LoginInput,
-  type RegisterInput,
-} from '@/lib/validators/auth.js'
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from '@/components/ui/card.js'
-import { Input } from '@/components/ui/input.js'
-import { Button } from '@/components/ui/button.js'
-import { Label } from '@/components/ui/label.js'
-import { Separator } from '@/components/ui/separator.js'
+import { loginSchema } from '@/lib/validators/auth.js'
+import type { LoginInput } from '@/lib/validators/auth.js'
 
-// ─── Field wrapper with icon ───────────────────────────────────────────────
+// ─── Extended register schema (3-step) ────────────────────────────────────
 
-interface InputWithIconProps extends React.ComponentProps<'input'> {
-  Icon: React.ElementType
-  label: string
-  error?: string
-  id: string
+const registerSchema = z.object({
+  // Step 1
+  name: z.string().min(2, 'At least 2 characters').max(50),
+  email: z.string().min(1, 'Required').email('Invalid email'),
+  rollNumber: z.string().min(1, 'Required'),
+  password: z.string().min(8, 'At least 8 characters'),
+  confirmPassword: z.string().min(1, 'Required'),
+  // Step 2
+  college: z.string().optional(),
+  branch: z.string().optional(),
+  year: z.string().optional(),
+  skills: z.string().optional(),
+  // Step 3
+  bio: z.string().optional(),
+  github: z.string().optional(),
+  linkedin: z.string().optional(),
+  portfolio: z.string().optional(),
+}).refine((d) => d.password === d.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
+})
+
+type RegisterInput = z.infer<typeof registerSchema>
+
+const getServerMessage = (err: unknown): string | null => {
+  const e = err as AxiosError<{ error?: { message?: string } }>
+  return e?.response?.data?.error?.message ?? null
 }
 
-const InputWithIcon = ({ Icon, label, error, id, ...props }: InputWithIconProps) => (
-  <div className="space-y-2">
-    <Label htmlFor={id}>{label}</Label>
+// ─── Shared field component ────────────────────────────────────────────────
+
+const Field = ({
+  Icon, label, id, error, rightSlot, ...props
+}: { Icon: React.ElementType; label: string; id: string; error?: string; rightSlot?: React.ReactNode } & React.ComponentProps<'input'>) => (
+  <div className="space-y-1.5">
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+      {label}
+    </label>
     <div className="relative">
-      <Icon className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-      <Input
+      <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+      <input
         id={id}
-        aria-invalid={!!error}
-        className="pl-9"
+        className={`w-full pl-10 ${rightSlot ? 'pr-10' : 'pr-4'} py-3 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary focus:border-transparent transition text-sm ${error ? 'border-red-400' : ''}`}
         {...props}
       />
+      {rightSlot && <div className="absolute right-2 top-1/2 -translate-y-1/2">{rightSlot}</div>}
     </div>
     {error && (
-      <p className="text-destructive flex items-center gap-1 text-xs">
-        <AlertCircle className="h-3 w-3 flex-shrink-0" />
-        {error}
+      <p className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
+        <AlertCircle className="h-3 w-3 shrink-0" />{error}
       </p>
     )}
   </div>
 )
 
-// ─── Step progress indicator ───────────────────────────────────────────────
-
-const ProgressBar = ({ currentStep }: { currentStep: number }) => (
-  <div className="mb-4">
-    <p className="text-muted-foreground mb-2 text-sm font-medium">Step {currentStep} of 2</p>
-    <div className="flex items-center justify-between">
-      {[1, 2].map((step) => (
-        <React.Fragment key={step}>
-          <div
-            className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-colors ${
-              step < currentStep
-                ? 'bg-primary text-primary-foreground'
-                : step === currentStep
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground'
-            }`}
-          >
-            {step < currentStep ? <Check className="h-3.5 w-3.5" /> : step}
-          </div>
-          {step < 2 && (
-            <div
-              className={`h-1 flex-1 transition-colors ${
-                step < currentStep ? 'bg-primary' : 'bg-muted'
-              }`}
-            />
-          )}
-        </React.Fragment>
-      ))}
-    </div>
+const TextareaField = ({ label, id, error, ...props }: { label: string; id: string; error?: string } & React.ComponentProps<'textarea'>) => (
+  <div className="space-y-1.5">
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+    <textarea
+      id={id}
+      className={`w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary focus:border-transparent transition text-sm resize-none ${error ? 'border-red-400' : ''}`}
+      {...props}
+    />
+    {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
   </div>
 )
 
@@ -89,282 +85,271 @@ const ProgressBar = ({ currentStep }: { currentStep: number }) => (
 
 const AuthForm = () => {
   const [isSignUp, setIsSignUp] = useState(false)
-  const [step, setStep] = useState(1) // step 1: name+rollNumber, step 2: email+password
+  const [step, setStep] = useState(1)
   const [serverError, setServerError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
   const { login, register } = useAuth()
   const navigate = useNavigate()
 
-  // ─── Login form ──────────────────────────────────────────────────────
   const loginForm = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   })
 
-  // ─── Register form ───────────────────────────────────────────────────
-  const registerForm = useForm<RegisterInput>({
+  const regForm = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { name: '', email: '', rollNumber: '', password: '', confirmPassword: '' },
+    mode: 'onTouched',
+    defaultValues: {
+      name: '', email: '', rollNumber: '', password: '', confirmPassword: '',
+      college: '', branch: '', year: '', skills: '',
+      bio: '', github: '', linkedin: '', portfolio: '',
+    },
   })
 
-  const handleLoginSubmit = loginForm.handleSubmit(async (values) => {
+  const handleLogin = loginForm.handleSubmit(async (v) => {
     setServerError(null)
     try {
-      await login(values.email, values.password)
+      await login(v.email, v.password)
       void navigate('/dashboard')
-    } catch {
-      setServerError('Invalid email or password. Please try again.')
+    } catch (err) {
+      setServerError(getServerMessage(err) ?? 'Invalid email or password.')
     }
   })
 
-  const handleRegisterStep = registerForm.handleSubmit(
-    async (values) => {
-      if (step === 1) {
-        // Validate step 1 fields before advancing
-        const step1Valid = await registerForm.trigger(['name', 'rollNumber'])
-        if (step1Valid) setStep(2)
-        return
-      }
+  const goNext = async () => {
+    const fields: Record<number, (keyof RegisterInput)[]> = {
+      1: ['name', 'email', 'rollNumber', 'password', 'confirmPassword'],
+      2: [],
+    }
+    const valid = await regForm.trigger(fields[step] ?? [])
+    if (valid) setStep((s) => s + 1)
+  }
 
-      // Step 2: submit
-      setServerError(null)
-      try {
-        await register({
-          name: values.name,
-          email: values.email,
-          password: values.password,
-          rollNumber: values.rollNumber,
-        })
-        void navigate('/dashboard')
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error && err.message.includes('already exists')
-            ? 'An account with this email already exists.'
-            : 'Registration failed. Please try again.'
-        setServerError(message)
-      }
-    },
-    // On validation error at step 2, show errors
-    () => {
-      if (step === 1) void registerForm.trigger(['name', 'rollNumber'])
-    },
-  )
+  const handleRegister = regForm.handleSubmit(async (v) => {
+    setServerError(null)
+    try {
+      const skillsArr = v.skills ? v.skills.split(',').map((s) => s.trim()).filter(Boolean) : []
+      const links: Record<string, string> = {}
+      if (v.github) links.github = v.github
+      if (v.linkedin) links.linkedin = v.linkedin
+      if (v.portfolio) links.portfolio = v.portfolio
 
-  const toggleMode = () => {
-    setIsSignUp((prev) => !prev)
+      await register({
+        name: v.name,
+        email: v.email,
+        password: v.password,
+        rollNumber: v.rollNumber,
+        college: v.college || undefined,
+        branch: v.branch || undefined,
+        year: v.year ? parseInt(v.year) : undefined,
+        bio: v.bio || undefined,
+        skills: skillsArr,
+        links: Object.keys(links).length ? links : undefined,
+      } as any)
+      void navigate('/dashboard')
+    } catch (err) {
+      setServerError(getServerMessage(err) ?? 'Registration failed. Please try again.')
+    }
+  })
+
+  const switchMode = () => {
+    setIsSignUp((v) => !v)
     setStep(1)
     setServerError(null)
     loginForm.reset()
-    registerForm.reset()
+    regForm.reset()
   }
 
-  const regErrors = registerForm.formState.errors
+  const e = regForm.formState.errors
+  const EyeBtn = ({ show, toggle }: { show: boolean; toggle: () => void }) => (
+    <button type="button" onClick={toggle} tabIndex={-1} className="text-gray-400 hover:text-gray-600 p-1">
+      {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+    </button>
+  )
 
   return (
-    <Card className="border-border bg-card w-full border shadow-sm">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold">
-          {isSignUp ? 'Join Your College Community' : 'Welcome Back'}
-        </CardTitle>
-        <CardDescription>
-          {isSignUp ? (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 lg:p-8 w-full max-w-md mx-auto transition-colors">
+      {/* Header */}
+      <div className="text-center mb-6">
+        <div className="lg:hidden flex items-center justify-center mb-4">
+          <div className="bg-primary p-2.5 rounded-xl"><BookOpen className="h-7 w-7 text-white" /></div>
+          <h1 className="text-2xl font-bold text-primary ml-3">Studium</h1>
+        </div>
+        <h3 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">
+          {isSignUp ? 'Join Your College Community' : 'Welcome back'}
+        </h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          {isSignUp
+            ? `Step ${step} of 3: ${step === 1 ? 'Basic Information' : step === 2 ? 'Academic Details' : 'Profile Setup'}`
+            : 'Sign in to your account'}
+        </p>
+      </div>
+
+      {/* Progress bar */}
+      {isSignUp && (
+        <div className="mb-6">
+          <div className="flex justify-between mb-2">
+            {[1,2,3].map((s) => (
+              <div key={s} className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${s <= step ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>
+                {s}
+              </div>
+            ))}
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+            <div className="bg-primary h-2 rounded-full transition-all duration-300" style={{ width: `${((step - 1) / 2) * 100}%` }} />
+          </div>
+        </div>
+      )}
+
+      {/* Login form */}
+      {!isSignUp && (
+        <form onSubmit={handleLogin} className="space-y-4" noValidate>
+          <Field Icon={Mail} label="Email or Roll Number" id="email" type="email" placeholder="your.name@college.edu"
+            error={loginForm.formState.errors.email?.message} {...loginForm.register('email')} />
+          <Field Icon={Lock} label="Password" id="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••"
+            error={loginForm.formState.errors.password?.message}
+            rightSlot={<EyeBtn show={showPassword} toggle={() => setShowPassword((v) => !v)} />}
+            {...loginForm.register('password')} />
+          {serverError && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg flex items-center gap-2"><AlertCircle className="h-4 w-4" />{serverError}</p>}
+          <button type="submit" disabled={loginForm.formState.isSubmitting}
+            className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 disabled:opacity-60 transition">
+            {loginForm.formState.isSubmitting ? 'Signing in…' : 'Sign In'}
+          </button>
+        </form>
+      )}
+
+      {/* Register form */}
+      {isSignUp && (
+        <div className="space-y-4">
+          {step === 1 && (
             <>
-              Complete your profile to get started.
-              <ProgressBar currentStep={step} />
+              <Field Icon={User} label="Full Name" id="name" type="text" placeholder="Enter your full name"
+                error={e.name?.message} {...regForm.register('name')} />
+              <Field Icon={Mail} label="College Email" id="email" type="email" placeholder="your.name@college.edu"
+                error={e.email?.message} {...regForm.register('email')} />
+              <Field Icon={Hash} label="Roll Number / Student ID" id="rollNumber" type="text" placeholder="2021CS001"
+                error={e.rollNumber?.message} {...regForm.register('rollNumber')} />
+              <Field Icon={Lock} label="Password" id="password" type={showPassword ? 'text' : 'password'} placeholder="At least 8 characters"
+                error={e.password?.message}
+                rightSlot={<EyeBtn show={showPassword} toggle={() => setShowPassword((v) => !v)} />}
+                {...regForm.register('password')} />
+              <Field Icon={Lock} label="Confirm Password" id="confirmPassword" type="password" placeholder="Repeat password"
+                error={e.confirmPassword?.message} {...regForm.register('confirmPassword')} />
             </>
-          ) : (
-            'Sign in to your account to continue.'
           )}
-        </CardDescription>
-      </CardHeader>
 
-      <CardContent>
-        {/* ─── Login form ─────────────────────────────────────────────── */}
-        {!isSignUp && (
-          <form onSubmit={handleLoginSubmit} className="space-y-4" noValidate>
-            <InputWithIcon
-              Icon={Mail}
-              label="College Email"
-              id="email"
-              type="email"
-              placeholder="your.name@college.edu"
-              autoComplete="email"
-              error={loginForm.formState.errors.email?.message}
-              {...loginForm.register('email')}
-            />
-            <InputWithIcon
-              Icon={Lock}
-              label="Password"
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              autoComplete="current-password"
-              error={loginForm.formState.errors.password?.message}
-              {...loginForm.register('password')}
-            />
+          {step === 2 && (
+            <>
+              <Field Icon={School} label="College / University" id="college" type="text" placeholder="Stanford University"
+                {...regForm.register('college')} />
+              <Field Icon={BookOpen} label="Branch / Department" id="branch" type="text" placeholder="Computer Science"
+                {...regForm.register('branch')} />
+              <div className="space-y-1.5">
+                <label htmlFor="year" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Year of Study</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                  <select id="year" {...regForm.register('year')}
+                    className="w-full pl-10 pr-4 py-3 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary focus:border-transparent transition text-sm">
+                    <option value="">Select year</option>
+                    <option value="1">1st Year</option>
+                    <option value="2">2nd Year</option>
+                    <option value="3">3rd Year</option>
+                    <option value="4">4th Year</option>
+                    <option value="5">5th Year</option>
+                    <option value="6">Graduate Student</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="skills" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Skills <span className="text-gray-400 text-xs">(comma-separated)</span></label>
+                <input id="skills" type="text" placeholder="Python, React, Machine Learning"
+                  className="w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-primary focus:border-transparent transition text-sm"
+                  {...regForm.register('skills')} />
+              </div>
+            </>
+          )}
 
-            {serverError && (
-              <p className="text-destructive flex items-center gap-1 text-sm">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                {serverError}
-              </p>
+          {step === 3 && (
+            <>
+              <TextareaField label="Bio" id="bio" rows={3}
+                placeholder="Tell us about yourself, your interests and goals…"
+                {...regForm.register('bio')} />
+              <Field Icon={Github} label="GitHub (optional)" id="github" type="url" placeholder="https://github.com/username"
+                {...regForm.register('github')} />
+              <Field Icon={Linkedin} label="LinkedIn (optional)" id="linkedin" type="url" placeholder="https://linkedin.com/in/username"
+                {...regForm.register('linkedin')} />
+              <Field Icon={Globe} label="Portfolio (optional)" id="portfolio" type="url" placeholder="https://yourportfolio.com"
+                {...regForm.register('portfolio')} />
+            </>
+          )}
+
+          {serverError && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg flex items-center gap-2"><AlertCircle className="h-4 w-4" />{serverError}</p>}
+
+          <div className="flex gap-3">
+            {step > 1 && (
+              <button type="button" onClick={() => setStep((s) => s - 1)}
+                className="flex-1 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition text-sm">
+                Back
+              </button>
             )}
-
-            <Button
-              type="submit"
-              className="mt-2 w-full"
-              disabled={loginForm.formState.isSubmitting}
-            >
-              {loginForm.formState.isSubmitting ? 'Signing in…' : 'Sign In'}
-            </Button>
-          </form>
-        )}
-
-        {/* ─── Register form ───────────────────────────────────────────── */}
-        {isSignUp && (
-          <form onSubmit={handleRegisterStep} className="space-y-4" noValidate>
-            {step === 1 && (
-              <>
-                <InputWithIcon
-                  Icon={User}
-                  label="Full Name"
-                  id="name"
-                  type="text"
-                  placeholder="Enter your full name"
-                  autoComplete="name"
-                  error={regErrors.name?.message}
-                  {...registerForm.register('name')}
-                />
-                <InputWithIcon
-                  Icon={Hash}
-                  label="Roll Number / Student ID"
-                  id="rollNumber"
-                  type="text"
-                  placeholder="2021CS001"
-                  error={regErrors.rollNumber?.message}
-                  {...registerForm.register('rollNumber')}
-                />
-              </>
+            {step < 3 ? (
+              <button type="button" onClick={() => void goNext()}
+                className="flex-1 bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 transition text-sm">
+                Continue
+              </button>
+            ) : (
+              <button type="button" onClick={() => void handleRegister()}
+                disabled={regForm.formState.isSubmitting}
+                className="flex-1 bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary/90 disabled:opacity-60 transition text-sm">
+                {regForm.formState.isSubmitting ? 'Creating account…' : 'Create Account'}
+              </button>
             )}
+          </div>
+        </div>
+      )}
 
-            {step === 2 && (
-              <>
-                <InputWithIcon
-                  Icon={Mail}
-                  label="College Email"
-                  id="reg-email"
-                  type="email"
-                  placeholder="your.name@college.edu"
-                  autoComplete="email"
-                  error={regErrors.email?.message}
-                  {...registerForm.register('email')}
-                />
-                <InputWithIcon
-                  Icon={Lock}
-                  label="Password"
-                  id="reg-password"
-                  type="password"
-                  placeholder="At least 8 characters"
-                  autoComplete="new-password"
-                  error={regErrors.password?.message}
-                  {...registerForm.register('password')}
-                />
-                <InputWithIcon
-                  Icon={Lock}
-                  label="Confirm Password"
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="Repeat password"
-                  autoComplete="new-password"
-                  error={regErrors.confirmPassword?.message}
-                  {...registerForm.register('confirmPassword')}
-                />
-              </>
-            )}
-
-            {serverError && (
-              <p className="text-destructive flex items-center gap-1 text-sm">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                {serverError}
-              </p>
-            )}
-
-            <div className="flex gap-3">
-              {step === 2 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setStep(1)}
-                >
-                  Back
-                </Button>
-              )}
-              <Button
-                type="submit"
-                className="flex-1"
-                disabled={registerForm.formState.isSubmitting}
-              >
-                {registerForm.formState.isSubmitting
-                  ? 'Creating account…'
-                  : step < 2
-                    ? 'Continue'
-                    : 'Create Account'}
-              </Button>
-            </div>
-          </form>
-        )}
-      </CardContent>
-
-      <Separator className="my-2" />
-
-      <CardFooter className="text-muted-foreground flex justify-center text-sm">
+      <div className="mt-5 text-center text-sm text-gray-600 dark:text-gray-300">
         {isSignUp ? 'Already have an account?' : "Don't have an account?"}
-        <Button variant="link" className="text-primary ml-1 p-0" onClick={toggleMode}>
+        <button onClick={switchMode} className="text-primary hover:text-primary/80 font-medium ml-1 transition">
           {isSignUp ? 'Sign In' : 'Sign Up'}
-        </Button>
-      </CardFooter>
-    </Card>
+        </button>
+      </div>
+    </div>
   )
 }
 
-// ─── Page layout ───────────────────────────────────────────────────────────
+// ─── Page ──────────────────────────────────────────────────────────────────
 
 const LoginPage = () => (
-  <div className="bg-background flex min-h-screen items-center justify-center px-4 lg:px-8">
-    <div className="border-border bg-card w-full max-w-5xl overflow-hidden rounded-xl border shadow-lg lg:grid lg:grid-cols-2">
-      {/* Left hero panel */}
-      <div className="bg-primary text-primary-foreground hidden flex-col justify-center space-y-6 p-10 lg:flex">
-        <div className="flex items-center space-x-3">
-          <BookOpen className="h-7 w-7" />
-          <h1 className="text-3xl font-bold">Studium</h1>
+  <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4 transition-colors">
+    <div className="max-w-5xl w-full grid lg:grid-cols-2 gap-8 items-center">
+      {/* Hero */}
+      <div className="hidden lg:block">
+        <div className="flex items-center mb-6">
+          <div className="bg-primary p-3 rounded-xl"><BookOpen className="h-8 w-8 text-white" /></div>
+          <h1 className="text-3xl font-bold text-primary ml-3">Studium</h1>
         </div>
-
-        <h2 className="text-4xl leading-tight font-bold">Your College Community Platform</h2>
-
-        <p className="text-base opacity-90">
-          A hybrid of Notion, Reddit, and LinkedIn — designed for college students to connect,
-          learn, and grow together.
+        <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">Your College Community Platform</h2>
+        <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
+          The perfect blend of Notion, Reddit, and LinkedIn for college students. Connect, learn, and grow together.
         </p>
-
-        <Separator className="bg-primary-foreground/40" />
-
-        <ul className="space-y-3 text-sm">
-          <li className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4" /> Collaborative learning spaces
-          </li>
-          <li className="flex items-center gap-2">
-            <Mail className="h-4 w-4" /> Smart community discussions
-          </li>
-          <li className="flex items-center gap-2">
-            <User className="h-4 w-4" /> Career networking &amp; mentorship
-          </li>
-        </ul>
+        <div className="space-y-4">
+          {[
+            { icon: BookOpen, text: 'Collaborative knowledge sharing' },
+            { icon: Mail,     text: 'Reddit-style community discussions' },
+            { icon: User,     text: 'Professional networking & mentorship' },
+          ].map(({ icon: Icon, text }) => (
+            <div key={text} className="flex items-center">
+              <div className="bg-primary/10 dark:bg-primary/20 p-2 rounded-lg mr-4">
+                <Icon className="h-5 w-5 text-primary" />
+              </div>
+              <span className="text-gray-700 dark:text-gray-300">{text}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Right form panel */}
-      <div className="flex items-center justify-center p-8 lg:p-16">
-        <AuthForm />
-      </div>
+      <AuthForm />
     </div>
   </div>
 )

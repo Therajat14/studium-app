@@ -1,26 +1,26 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
-import { Heart, MessageCircle, Trash2 } from 'lucide-react'
-import { Avatar } from '@/components/ui/avatar.js'
-import { Badge } from '@/components/ui/badge.js'
-import { Button } from '@/components/ui/button.js'
-import { Card, CardContent } from '@/components/ui/card.js'
+import { TrendingUp, TrendingDown, MessageCircle, Bookmark, Share2, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTogglePostReaction } from '@/hooks/useReactions.js'
 import { useDeletePost } from '@/hooks/usePosts.js'
 import { useAuth } from '@/hooks/useAuth.js'
+import { postsApi } from '@/api/posts.js'
+import { CommentThread } from '@/features/posts/CommentThread.js'
 import type { Post, PostType } from '@/types/index.js'
 
-const TYPE_LABELS: Record<PostType, string> = {
-  DISCUSSION: 'Discussion',
-  QUESTION: 'Question',
-  ANNOUNCEMENT: 'Announcement',
-  RESOURCE: 'Resource',
+const TYPE_COLORS: Record<PostType, string> = {
+  DISCUSSION:   'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800',
+  QUESTION:     'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800',
+  ANNOUNCEMENT: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
+  RESOURCE:     'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800',
 }
 
-const TYPE_VARIANTS: Record<PostType, 'default' | 'secondary' | 'outline' | 'destructive'> = {
-  DISCUSSION: 'secondary',
-  QUESTION: 'default',
-  ANNOUNCEMENT: 'destructive',
-  RESOURCE: 'outline',
+const TYPE_LABELS: Record<PostType, string> = {
+  DISCUSSION:   'Discussion',
+  QUESTION:     'Question',
+  ANNOUNCEMENT: 'Announcement',
+  RESOURCE:     'Resource',
 }
 
 function relativeTime(iso: string): string {
@@ -41,88 +41,156 @@ interface PostCardProps {
 
 export const PostCard = ({ post }: PostCardProps) => {
   const { user } = useAuth()
+  const qc = useQueryClient()
   const { mutate: toggleReaction } = useTogglePostReaction(post.id)
   const { mutate: deletePost, isPending: isDeleting } = useDeletePost()
 
+  const [showComments, setShowComments] = useState(false)
+  const [bookmarked, setBookmarked] = useState(false)
+
+  const bookmarkMutation = useMutation({
+    mutationFn: () => postsApi.toggleBookmark(post.id),
+    onSuccess: (data) => setBookmarked(data.bookmarked),
+  })
+
   const isOwner = user?.id === post.author.id
-  const excerpt = post.content.length > 280 ? post.content.slice(0, 280) + '…' : post.content
+  const excerpt = post.content.length > 300 ? post.content.slice(0, 300) + '…' : post.content
 
   return (
-    <Card className="gap-3 py-4 transition-shadow hover:shadow-md">
-      <CardContent className="flex flex-col gap-3">
+    <div className="bg-card border rounded-xl overflow-hidden hover:border-border/80 transition-colors">
+      <div className="p-5">
         {/* Author row */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Avatar
-              src={post.author.avatarUrl}
-              fallback={post.author.name}
-              size="sm"
-            />
-            <div className="min-w-0">
-              <span className="text-sm font-medium leading-none">{post.author.name}</span>
-              <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-xs">
-                <span>{post.author.college ?? post.author.role}</span>
-                <span>·</span>
-                <span>{relativeTime(post.createdAt)}</span>
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="flex items-center gap-3">
+            {post.author.avatarUrl ? (
+              <img src={post.author.avatarUrl} alt={post.author.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                <span className="text-sm font-bold text-primary">{post.author.name[0]}</span>
               </div>
+            )}
+            <div>
+              <p className="text-sm font-semibold text-foreground leading-tight">{post.author.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {post.author.college ?? post.author.role} · {relativeTime(post.createdAt)}
+              </p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            <Badge variant={TYPE_VARIANTS[post.type]}>{TYPE_LABELS[post.type]}</Badge>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${TYPE_COLORS[post.type]}`}>
+              {TYPE_LABELS[post.type]}
+            </span>
             {isOwner && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
+              <button
                 disabled={isDeleting}
                 onClick={() => deletePost(post.id)}
+                className="p-1.5 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
                 aria-label="Delete post"
               >
-                <Trash2 className="size-3.5 text-destructive" />
-              </Button>
+                <Trash2 className="h-4 w-4" />
+              </button>
             )}
           </div>
         </div>
 
         {/* Content */}
-        <Link to={`/post/${post.id}`} className="group block">
+        <Link to={`/post/${post.id}`} className="block group mb-3">
           {post.title && (
-            <h3 className="group-hover:text-primary mb-1 font-semibold transition-colors">
+            <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors mb-1">
               {post.title}
             </h3>
           )}
-          <p className="text-muted-foreground text-sm leading-relaxed">{excerpt}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">{excerpt}</p>
         </Link>
 
         {/* Tags */}
         {post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5 mb-3">
             {post.tags.map(({ tag }) => (
-              <Badge key={tag.id} variant="outline" className="text-xs">
+              <span key={tag.id} className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                 #{tag.name}
-              </Badge>
+              </span>
             ))}
           </div>
         )}
 
-        {/* Footer actions */}
-        <div className="flex items-center gap-4 pt-1">
-          <button
-            onClick={() => toggleReaction('LIKE')}
-            className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm transition-colors"
-          >
-            <Heart className="size-4" />
-            <span>{post._count.reactions}</span>
-          </button>
-          <Link
-            to={`/post/${post.id}`}
-            className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm transition-colors"
-          >
-            <MessageCircle className="size-4" />
-            <span>{post._count.comments}</span>
-          </Link>
+        {/* Media thumbnails */}
+        {post.media.length > 0 && post.media[0].resourceType === 'IMAGE' && (
+          <div className="mb-3 rounded-lg overflow-hidden">
+            <img src={post.media[0].url} alt="" className="w-full max-h-64 object-cover" />
+          </div>
+        )}
+
+        {/* Action bar */}
+        <div className="flex items-center justify-between pt-2 border-t">
+          <div className="flex items-center gap-1">
+            {/* Upvote */}
+            <button
+              onClick={() => toggleReaction('UPVOTE')}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            >
+              <TrendingUp className="h-4 w-4" />
+              <span>{post._count.reactions}</span>
+            </button>
+
+            {/* Downvote */}
+            <button
+              onClick={() => toggleReaction('DOWNVOTE')}
+              className="p-1.5 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            >
+              <TrendingDown className="h-4 w-4" />
+            </button>
+
+            {/* Comments */}
+            <button
+              onClick={() => setShowComments(!showComments)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span>{post._count.comments}</span>
+              {showComments ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1">
+            {/* Bookmark */}
+            <button
+              onClick={() => bookmarkMutation.mutate()}
+              className={`p-1.5 rounded-lg transition-colors ${
+                bookmarked
+                  ? 'text-primary bg-primary/10'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+              }`}
+              aria-label="Bookmark"
+            >
+              <Bookmark className="h-4 w-4" />
+            </button>
+
+            {/* Share */}
+            <button
+              onClick={() => void navigator.clipboard.writeText(window.location.origin + `/post/${post.id}`)}
+              className="p-1.5 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              aria-label="Share"
+            >
+              <Share2 className="h-4 w-4" />
+            </button>
+
+            <Link
+              to={`/post/${post.id}`}
+              className="text-xs text-primary hover:underline px-2"
+            >
+              View →
+            </Link>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Inline comment thread */}
+      {showComments && (
+        <div className="border-t bg-muted/20 p-4">
+          <CommentThread postId={post.id} />
+        </div>
+      )}
+    </div>
   )
 }

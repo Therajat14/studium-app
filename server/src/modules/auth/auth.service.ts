@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { prisma } from '../../config/prisma.js'
 import { hashPassword, comparePassword } from '../../lib/password.js'
 import { generateRefreshToken } from '../../lib/token.js'
@@ -30,6 +31,9 @@ const safeUserSelect = {
   year: true,
   bio: true,
   avatarUrl: true,
+  skills: true,
+  karma: true,
+  links: true,
   createdAt: true,
 } as const
 
@@ -47,6 +51,12 @@ export const registerUser = async (input: RegisterInput): Promise<SafeUser> => {
       email: input.email,
       password: hashed,
       rollNumber: input.rollNumber ?? null,
+      college: input.college ?? null,
+      branch: input.branch ?? null,
+      year: input.year ?? null,
+      bio: input.bio ?? null,
+      skills: input.skills ?? [],
+      links: input.links != null ? (input.links as Prisma.InputJsonValue) : Prisma.JsonNull,
     },
     select: safeUserSelect,
   })

@@ -4,13 +4,25 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ThemeProvider } from '@/components/theme-provider.js'
 import { AuthProvider } from '@/context/AuthContext.js'
 import PrivateRoute from '@/routes/PrivateRoute.js'
+import { AppLayout } from '@/components/layout/AppLayout.js'
 import LoginPage from '@/pages/Login.js'
 import Dashboard from '@/pages/Dashboard.js'
 import Home from '@/pages/Home.js'
-import UnderDevelopment from '@/pages/UnderDevelopment.js'
+import ProfilePage from '@/pages/ProfilePage.js'
+import SearchPage from '@/pages/SearchPage.js'
+import KnowledgePage from '@/pages/KnowledgePage.js'
+import QnaPage from '@/pages/QnaPage.js'
+import OpportunitiesPage from '@/pages/OpportunitiesPage.js'
+import CampusPage from '@/pages/CampusPage.js'
 import { PostDetail } from '@/features/posts/PostDetail.js'
 import { ChatPage } from '@/features/chat/ChatPage.js'
 import { queryClient } from '@/lib/queryClient.js'
+
+const PrivatePage = ({ children }: { children: React.ReactNode }) => (
+  <PrivateRoute>
+    <AppLayout>{children}</AppLayout>
+  </PrivateRoute>
+)
 
 function App() {
   return (
@@ -21,54 +33,26 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<LoginPage />} />
-
-              <Route
-                path="/dashboard"
-                element={
-                  <PrivateRoute>
-                    <Dashboard />
-                  </PrivateRoute>
-                }
-              />
-
-              <Route
-                path="/post/:id"
-                element={
-                  <PrivateRoute>
-                    <PostDetail />
-                  </PrivateRoute>
-                }
-              />
-
-              <Route
-                path="/messages"
-                element={
-                  <PrivateRoute>
-                    <ChatPage />
-                  </PrivateRoute>
-                }
-              />
-
-              <Route
-                path="/messages/:conversationId"
-                element={
-                  <PrivateRoute>
-                    <ChatPage />
-                  </PrivateRoute>
-                }
-              />
-
-              {/* Redirect /signup → /login (signup is handled inside LoginPage) */}
               <Route path="/signup" element={<Navigate to="/login" replace />} />
 
-              {/* Catch-all for routes not yet implemented */}
-              <Route path="*" element={<UnderDevelopment />} />
+              <Route path="/dashboard"     element={<PrivatePage><Dashboard /></PrivatePage>} />
+              <Route path="/post/:id"      element={<PrivatePage><PostDetail /></PrivatePage>} />
+              <Route path="/messages"      element={<PrivatePage><ChatPage /></PrivatePage>} />
+              <Route path="/messages/:conversationId" element={<PrivatePage><ChatPage /></PrivatePage>} />
+              <Route path="/profile"       element={<PrivatePage><ProfilePage /></PrivatePage>} />
+              <Route path="/profile/:id"   element={<PrivatePage><ProfilePage /></PrivatePage>} />
+              <Route path="/search"        element={<PrivatePage><SearchPage /></PrivatePage>} />
+              <Route path="/knowledge"     element={<PrivatePage><KnowledgePage /></PrivatePage>} />
+              <Route path="/qna"           element={<PrivatePage><QnaPage /></PrivatePage>} />
+              <Route path="/opportunities" element={<PrivatePage><OpportunitiesPage /></PrivatePage>} />
+              <Route path="/campus"        element={<PrivatePage><CampusPage /></PrivatePage>} />
+
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </BrowserRouter>
         </AuthProvider>
       </ThemeProvider>
 
-      {/* TanStack Query devtools — removed in production build */}
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   )

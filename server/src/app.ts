@@ -20,6 +20,10 @@ import { postReactionRoutes, commentReactionRoutes } from './modules/reactions/r
 import { tagsRoutes } from './modules/tags/tags.routes.js'
 import { notificationsRoutes } from './modules/notifications/notifications.routes.js'
 import { messagingRoutes } from './modules/messaging/messaging.routes.js'
+import { knowledgeRoutes } from './modules/knowledge/knowledge.routes.js'
+import { qnaRoutes } from './modules/qna/qna.routes.js'
+import { opportunitiesRoutes } from './modules/opportunities/opportunities.routes.js'
+import { campusRoutes } from './modules/campus/campus.routes.js'
 
 export const createApp = async () => {
   const app = Fastify({ logger: loggerConfig })
@@ -79,6 +83,10 @@ export const createApp = async () => {
   await app.register(tagsRoutes,           { prefix: '/api/tags' })
   await app.register(notificationsRoutes,  { prefix: '/api/notifications' })
   await app.register(messagingRoutes,      { prefix: '/api/messages' })
+  await app.register(knowledgeRoutes,      { prefix: '/api/knowledge' })
+  await app.register(qnaRoutes,            { prefix: '/api/qna' })
+  await app.register(opportunitiesRoutes,  { prefix: '/api/opportunities' })
+  await app.register(campusRoutes,         { prefix: '/api/campus' })
 
   return app
 }

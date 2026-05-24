@@ -75,8 +75,9 @@ const getPostReactionCounts = async (postId: string): Promise<Record<ReactionTyp
     _count: { type: true },
   })
   return {
-    LIKE:   rows.find((r) => r.type === 'LIKE')?._count.type   ?? 0,
-    UPVOTE: rows.find((r) => r.type === 'UPVOTE')?._count.type ?? 0,
+    LIKE:     rows.find((r) => r.type === 'LIKE')?._count.type     ?? 0,
+    UPVOTE:   rows.find((r) => r.type === 'UPVOTE')?._count.type   ?? 0,
+    DOWNVOTE: rows.find((r) => r.type === 'DOWNVOTE')?._count.type ?? 0,
   }
 }
 
@@ -87,7 +88,8 @@ const getCommentReactionCounts = async (commentId: string): Promise<Record<React
     _count: { type: true },
   })
   return {
-    LIKE:   rows.find((r) => r.type === 'LIKE')?._count.type   ?? 0,
-    UPVOTE: rows.find((r) => r.type === 'UPVOTE')?._count.type ?? 0,
+    LIKE:     rows.find((r) => r.type === 'LIKE')?._count.type     ?? 0,
+    UPVOTE:   rows.find((r) => r.type === 'UPVOTE')?._count.type   ?? 0,
+    DOWNVOTE: rows.find((r) => r.type === 'DOWNVOTE')?._count.type ?? 0,
   }
 }

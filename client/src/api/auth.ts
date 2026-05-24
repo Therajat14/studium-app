@@ -10,6 +10,12 @@ interface RegisterPayload {
   email: string
   password: string
   rollNumber?: string
+  college?: string
+  branch?: string
+  year?: number
+  bio?: string
+  skills?: string[]
+  links?: { github?: string; linkedin?: string; portfolio?: string }
 }
 
 interface LoginPayload {

@@ -19,6 +19,9 @@ export interface User {
   year: number | null
   bio: string | null
   avatarUrl: string | null
+  skills: string[]
+  karma: number
+  rollNumber: string | null
   createdAt: string
 }
 
@@ -209,4 +212,148 @@ export type ApiResponse<T> = ApiSuccess<T> | ApiError
 export interface AuthResponse {
   accessToken: string
   user: User
+}
+
+// ─── Knowledge ─────────────────────────────────────────────────────────────
+
+export type ResourceType = 'PDF' | 'VIDEO' | 'LINK' | 'IMAGE' | 'DOCUMENT' | 'OTHER'
+
+export interface ResourceAuthor {
+  id: string
+  name: string
+  avatarUrl: string | null
+}
+
+export interface Resource {
+  id: string
+  title: string
+  description: string | null
+  type: ResourceType
+  url: string
+  subject: string | null
+  course: string | null
+  tags: string[]
+  downloads: number
+  avgRating: number | null
+  isBookmarked: boolean
+  uploadedBy: ResourceAuthor
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ResourceListResponse {
+  items: Resource[]
+  total: number
+  page: number
+}
+
+// ─── Q&A ───────────────────────────────────────────────────────────────────
+
+export type QuestionDifficulty = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED'
+
+export interface QnaAuthor {
+  id: string
+  name: string
+  avatarUrl: string | null
+  karma: number
+}
+
+export interface QnaAnswer {
+  id: string
+  content: string
+  isAccepted: boolean
+  voteCount: number
+  userVote: 'UP' | 'DOWN' | null
+  author: QnaAuthor
+  createdAt: string
+}
+
+export interface QnaQuestion {
+  id: string
+  title: string
+  content: string
+  tags: string[]
+  difficulty: QuestionDifficulty
+  voteCount: number
+  userVote: 'UP' | 'DOWN' | null
+  bounty: number
+  views: number
+  isBookmarked: boolean
+  isClosed: boolean
+  author: QnaAuthor
+  answers: QnaAnswer[]
+  _count: { answers: number }
+  createdAt: string
+}
+
+export interface QnaListResponse {
+  items: QnaQuestion[]
+  total: number
+  page: number
+}
+
+// ─── Opportunities ─────────────────────────────────────────────────────────
+
+export type OpportunityType = 'JOB' | 'INTERNSHIP' | 'HACKATHON' | 'EVENT' | 'SCHOLARSHIP' | 'PROJECT'
+
+export interface OpportunityPoster {
+  id: string
+  name: string
+  avatarUrl: string | null
+  role: Role
+}
+
+export interface Opportunity {
+  id: string
+  title: string
+  description: string
+  type: OpportunityType
+  company: string | null
+  location: string | null
+  salary: string | null
+  requirements: string[]
+  tags: string[]
+  deadline: string | null
+  eventDate: string | null
+  url: string | null
+  maxAttendees: number | null
+  postedBy: OpportunityPoster
+  createdAt: string
+}
+
+export interface OpportunityListResponse {
+  items: Opportunity[]
+  total: number
+  page: number
+}
+
+// ─── Campus ────────────────────────────────────────────────────────────────
+
+export type ReviewCategory = 'FACULTY' | 'COURSE' | 'FACILITY' | 'FOOD' | 'TRANSPORT' | 'OTHER'
+
+export interface ReviewAuthor {
+  id: string
+  name: string
+  avatarUrl: string | null
+  branch: string | null
+  year: number | null
+}
+
+export interface CampusReview {
+  id: string
+  category: ReviewCategory
+  title: string
+  content: string
+  rating: number
+  helpful: number
+  notHelpful: number
+  userVote: boolean | null
+  author: ReviewAuthor
+  createdAt: string
+}
+
+export interface CampusListResponse {
+  items: CampusReview[]
+  total: number
+  page: number
 }
