@@ -1,0 +1,89 @@
+// Studium — PostgreSQL schema
+// Phase 2: User + RefreshToken (auth foundation)
+// Phase 3: Follow (social graph)
+// Phase 4 will add: Post, Comment, Vote, Resource, Group, Membership, Notification, Tag
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ─────────────────────────────────────────────────────────────────
+
+enum Role {
+  STUDENT
+  ALUMNI
+  MENTOR    // Assigned role for mentors; higher trust than STUDENT/ALUMNI
+  ADMIN
+}
+
+// ─── User ──────────────────────────────────────────────────────────────────
+
+model User {
+  id         String  @id @default(cuid())
+  email      String  @unique
+  name       String  @db.VarChar(50)
+  /// Stored as bcrypt hash — never returned in API responses
+  password   String
+  rollNumber String? @unique
+  college    String?
+  branch     String?
+  year       Int?
+  bio        String? @db.Text
+  avatarUrl  String?
+  role       Role    @default(STUDENT)
+  /// Social links: { github?, linkedin?, portfolio?, twitter? }
+  links      Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  refreshTokens RefreshToken[]
+
+  // Social graph — unidirectional follows (Twitter-style)
+  // followers: Follow records where followingId = this user (people who follow me)
+  followers Follow[] @relation("UserFollowers")
+  // following: Follow records where followerId = this user (people I follow)
+  following Follow[] @relation("UserFollowing")
+
+  @@index([email])
+  @@index([role])
+  @@index([college])
+}
+
+// ─── Refresh Token ─────────────────────────────────────────────────────────
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  /// Opaque random token (not a JWT) — enables server-side revocation
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+// ─── Follow ────────────────────────────────────────────────────────────────
+
+model Follow {
+  id          String   @id @default(cuid())
+  /// The user doing the following
+  followerId  String
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  /// The user being followed
+  followingId String
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  /// One follow relationship per ordered pair — enforced at DB level
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}

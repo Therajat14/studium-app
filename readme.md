@@ -1,94 +1,192 @@
-# Studium: The Unified Platform for College Life 🎓
+# Studium
 
-> **Studium** is a student-first platform that blends **Notion**'s knowledge sharing, **Reddit**'s community interaction, and **LinkedIn**'s professional networking—all within a single, secure, college-specific ecosystem.
+> "Notion + Reddit + LinkedIn — for your college."
 
----
-
-## Project Vision & Problem Statement
-
-The college experience is currently fragmented and inefficient. Students are forced to rely on a mix of disconnected platforms to manage their academic, social, and professional lives, which leads to several key problems:
-
-- **Isolation in College:** New students often feel lost and struggle to find a supportive network, making it difficult to find peers for help or connect with seniors.
-- **Scattered Resources:** Essential academic resources—like notes, past papers, and study guides—are buried in temporary WhatsApp groups or disorganized cloud drives, making them difficult to find and often lost forever.
-- **Limited Networking:** Students lack a dedicated, peer-focused platform. LinkedIn is too formal for daily questions, and broad platforms like Reddit are not tailored to a specific campus community.
-- **Lack of Trusted Reviews:** It’s difficult for students to make informed decisions about courses, faculty, and campus events without a centralized source of honest, peer-generated reviews.
-
-**Studium** solves these problems by creating a single, cohesive hub that centralizes all aspects of campus life, empowering students to build community, share knowledge, and seize opportunities.
+A student ecosystem platform combining knowledge sharing, community discussions, mentorship, networking, resource sharing, and project collaboration.
 
 ---
 
-## 💡 Core Modules & Key Features
+## Current Status: Phase 2 Complete
 
-### 1. Authentication & Profiles (The "LinkedIn" Vibe)
-
-- **User Registration:** Signup using a college email or roll number for identity verification.
-- **Comprehensive Profiles:** Personal profile showcasing skills, academic interests, career goals, and links to professional portfolios.
-- **Connections:** Follow and connect with peers, juniors, seniors, and alumni within the college.
-- **Privacy Control:** Manage profile visibility and content access.
-
-### 2. Community Interaction (The "Reddit" Vibe)
-
-- **Main Feed:** Timeline of posts from college peers, central hub for discussions.
-- **Diverse Post Types:** Text, images, polls, and file attachments supported.
-- **Upvote/Downvote System:** Surface helpful content, filter noise.
-- **Tags & Communities:** Hashtags like `#Placement`, `#FirstYearHelp` act as sub-communities.
-
-### 3. Knowledge Sharing (The "Notion" Vibe)
-
-- **Resource Library:** Centralized hub for uploading and accessing lecture notes, assignments, research papers.
-- **Collaborative Docs:** Real-time collaboration on shared documents (study guides, projects).
-- **Bookmark & Save:** Personal library for important posts/resources.
-
-### 4. Q&A & Mentorship (Blend of Reddit + LinkedIn)
-
-- **Ask a Question:** Crowdsourced answers on academics, career, or campus topics.
-- **Mentorship Matching:** Connect juniors with seniors/alumni by shared skills.
-- **Alumni Network:** Visible alumni profiles for guidance & networking.
-
-### 5. Opportunities & Networking
-
-- **Events Calendar:** Workshops, hackathons, campus fests, and events.
-- **Internship/Job Board:** Share job openings, internships, and referrals.
-- **Project Showcase:** Display side projects and gather feedback.
-
-### 6. Campus Life & Reviews
-
-- **College Reviews:** Rate and review faculty, courses, and campus facilities.
-- **Local Help:** Discover the best places to eat, print notes, or hang out.
+- ✅ **Authentication** — register, login, refresh token rotation, logout
+- ✅ **TypeScript** — strict end-to-end (both client and server)
+- ✅ **Fastify backend** — modular plugin architecture
+- ✅ **PostgreSQL + Prisma** — relational schema, migrations
+- ✅ **React Query + React Hook Form + Zod** — typed data fetching and forms
+- 🚧 **Dashboard features** — coming in Phase 4
 
 ---
 
-## 🛠️ Technology Stack
+## Tech Stack
 
-- **Frontend:** React.js, React Router
-- **Backend:** Node.js, Express.js
-- **Database:** MongoDB
-- **Real-time:** Socket.IO
-- **File Storage:** AWS S3 (or similar cloud storage)
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19, TypeScript, Vite, TailwindCSS v4 |
+| Data fetching | TanStack Query v5 |
+| Forms | React Hook Form + Zod |
+| UI components | shadcn/ui (Radix + Tailwind) |
+| Backend | Fastify 4, TypeScript, Node.js |
+| Database | PostgreSQL + Prisma ORM |
+| Auth | JWT (access token) + httpOnly cookie (refresh token) |
+| Security | Helmet, rate limiting, bcrypt (12 rounds) |
 
 ---
 
-## 🚀 Getting Started
+## Project Structure
 
-To get a local copy up and running, follow these steps:
+```
+studium-app/
+├── client/                 # React frontend
+│   ├── src/
+│   │   ├── api/            # API client functions
+│   │   ├── components/
+│   │   │   ├── ui/         # shadcn/ui primitives
+│   │   │   └── auth/       # Auth-specific components
+│   │   ├── context/        # AuthContext
+│   │   ├── features/       # (Phase 4+) Feature modules
+│   │   ├── hooks/          # Custom hooks
+│   │   ├── lib/            # Utils, validators, QueryClient
+│   │   ├── pages/          # Route-level pages
+│   │   ├── routes/         # Route guards
+│   │   ├── types/          # Shared TypeScript types
+│   │   └── utils/          # axiosInstance
+│   └── ...
+│
+├── server/                 # Fastify backend
+│   ├── src/
+│   │   ├── config/         # env validation, Prisma client, logger
+│   │   ├── lib/            # password, token, response helpers
+│   │   ├── middlewares/    # error handler
+│   │   ├── modules/
+│   │   │   └── auth/       # routes, controller, service, schemas
+│   │   ├── types/          # Shared TypeScript types + module augmentation
+│   │   ├── app.ts          # Fastify app factory
+│   │   └── server.ts       # Entry point
+│   ├── prisma/
+│   │   └── schema.prisma   # Database schema
+│   └── ...
+│
+└── docs/                   # Architecture docs
+```
+
+---
+
+## Setup
+
+### Prerequisites
+
+- Node.js 20+
+- PostgreSQL 15+ (running locally or via Docker)
+
+### 1. Clone and install
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/your-username/studium.git
-cd studium
-
-# 2. Install dependencies for frontend and backend
-cd client   # or frontend
-npm install
-cd ../server  # or backend
-npm install
-
-# 3. Configure environment variables
-# Create a .env file in the backend directory and add credentials:
-# - MongoDB URI
-# - AWS S3 keys
-# - JWT secret, etc.
-
-# 4. Run the application (example)
-npm run dev
+git clone <repo>
+cd studium-app
+npm install          # installs root devDeps (concurrently)
+npm run install:all  # installs client + server dependencies
 ```
+
+### 2. Configure environment
+
+```bash
+# Server
+cp server/.env.example server/.env
+# Edit server/.env — set DATABASE_URL and JWT_SECRET
+
+# Client (optional — defaults to localhost:5000)
+cp client/.env.example client/.env
+```
+
+### 3. Set up database
+
+```bash
+# Create the database, run migrations, generate Prisma client
+npm run db:migrate
+```
+
+### 4. Run in development
+
+```bash
+npm run dev
+# Client → http://localhost:5173
+# Server → http://localhost:5000
+# Health check → http://localhost:5000/health
+```
+
+---
+
+## API
+
+Base URL: `http://localhost:5000/api`
+
+All responses follow the shape:
+```json
+{ "success": true, "data": { ... } }
+{ "success": false, "error": { "message": "..." } }
+```
+
+### Auth endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/auth/register` | — | Create account |
+| `POST` | `/auth/login` | — | Sign in |
+| `POST` | `/auth/refresh` | cookie | Rotate refresh token, get new access token |
+| `GET` | `/auth/me` | Bearer | Get current user |
+| `POST` | `/auth/logout` | — | Revoke refresh token |
+
+---
+
+## Environment Variables
+
+### Server (`server/.env`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | ✅ | PostgreSQL connection string |
+| `JWT_SECRET` | ✅ | Min 32 chars — use `openssl rand -base64 32` |
+| `PORT` | — | Defaults to `5000` |
+| `JWT_ACCESS_EXPIRY` | — | Defaults to `15m` |
+| `JWT_REFRESH_EXPIRY` | — | Defaults to `7d` |
+| `BCRYPT_SALT_ROUNDS` | — | Defaults to `12` |
+| `CORS_ORIGIN` | — | Defaults to `http://localhost:5173` |
+
+### Client (`client/.env`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_API_URL` | — | Defaults to `http://localhost:5000/api` |
+
+---
+
+## Development Scripts
+
+```bash
+npm run dev              # Start both client and server
+npm run typecheck        # Run tsc --noEmit on both sides
+npm run lint             # ESLint both sides
+npm run db:migrate       # Run Prisma migrations
+npm run db:studio        # Open Prisma Studio (DB GUI)
+```
+
+---
+
+## Roadmap
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| 1 | ✅ | Repository analysis, architecture planning |
+| 2 | ✅ | TypeScript migration, Fastify backend, auth system |
+| 3 | 🔜 | Complete backend APIs, additional security hardening |
+| 4 | 🔜 | Posts, feed, profiles, resources, groups |
+| 5 | 🔜 | Real-time (Socket.IO), notifications, messaging |
+| 6 | 🔜 | Tests, search, CI/CD, deployment |
+
+See [`docs/roadmap.md`](docs/roadmap.md) for detailed feature plans.
+
+---
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for coding standards, git workflow, and conventions.

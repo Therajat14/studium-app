@@ -1,0 +1,24 @@
+{
+  "name": "studium",
+  "private": true,
+  "description": "Studium — student ecosystem platform (monorepo root)",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build",
+    "typecheck": "npm run typecheck:client && npm run typecheck:server",
+    "typecheck:client": "cd client && npm run typecheck",
+    "typecheck:server": "cd server && npm run typecheck",
+    "lint": "npm run lint:client && npm run lint:server",
+    "lint:client": "cd client && npm run lint",
+    "lint:server": "cd server && npm run lint",
+    "db:migrate": "cd server && npm run db:migrate",
+    "db:studio": "cd server && npm run db:studio",
+    "install:all": "cd client && npm install && cd ../server && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
